@@ -1,0 +1,14 @@
+*.synctex.gz
+
+*.aux
+
+*.log
+
+*.bbl
+
+*.blg
+
+*.out
+
+data/*.nc
+

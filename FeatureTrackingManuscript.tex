@@ -1,0 +1,413 @@
+%% Copernicus Publications Manuscript Preparation Template for LaTeX Submissions
+%% ---------------------------------
+%% This template should be used for the following class files: copernicus.cls, copernicus2.cls, copernicus_discussions.cls
+%% The class files, the Copernicus LaTeX Manual with detailed explanations regarding the comments
+%% and some style files are bundled in the Copernicus Latex Package which can be downloaded from the different journal webpages.
+%% For further assistance please contact the Publication Production Office (production@copernicus.org).
+%% http://publications.copernicus.org
+
+
+%% Differing commands regarding the specific class files are highlighted.
+
+
+%% copernicus.cls
+%\documentclass[gmd]{copernicus}
+
+%% copernicus2.cls
+%\documentclass[gmd]{copernicus2}
+
+%% copernicus_discussions.cls
+\documentclass[gmdd, hvmath, online]{copernicus_discussions}
+
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{multicol}
+\usepackage{natbib}
+\usepackage{wrapfig}
+\usepackage{hyperref}
+\usepackage{tabularx}
+\usepackage{setspace}
+\usepackage{comment}
+\usepackage{color}
+\usepackage{float}
+\usepackage{rotfloat}
+\usepackage{rotating}
+
+\newcommand\BibTeX{{\rmfamily B\kern-.05em \textsc{i\kern-.025em b}\kern-.08em
+T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+% Custom commands
+\newcommand{\vb}{\mathbf}
+\newcommand{\vg}{\boldsymbol}
+\newcommand{\mat}{\mathsf}
+\newcommand{\diff}[2]{\frac{d #1}{d #2}}
+\newcommand{\diffsq}[2]{\frac{d^2 #1}{{d #2}^2}}
+\newcommand{\pdiff}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\pdiffsq}[2]{\frac{\partial^2 #1}{{\partial #2}^2}}
+
+
+\begin{document}
+
+\linenumbers
+
+\title{Scale-Insensitive Pointwise Feature Tracking on Unstructured Grids}
+
+\author{Paul A. Ullrich and Colin Zarzycki}
+
+\affil{Paul A. Ullrich, Department of Land, Air and Water Resources, University of California, Davis, One Shields Ave., Davis, CA 95616.  Email: paullrich@ucdavis.edu}
+
+\runningtitle{Scale-Insensitive Pointwise Feature Tracking ...}
+
+\runningauthor{P.~A.~Ullrich and C.~Zarzycki}
+
+\correspondence{Paul A. Ullrich\\ (paullrich@ucdavis.edu)}
+
+
+
+\received{}
+\pubdiscuss{} %% only important for two-stage journals
+\revised{}
+\accepted{}
+\published{}
+
+%% These dates will be inserted by the Publication Production Office during the typesetting process.
+
+
+\firstpage{1}
+
+\maketitle  %% Please note that for the copernicus2.cls this command needs to be inserted after \abstract{TEXT}
+
+
+
+\begin{abstract}
+This paper describes the new pointwise feature tracking module in the TempestExtremes package.
+\end{abstract}
+
+
+%% only used for copernicus2.cls
+%\abstract{
+% TEXT
+% \keywords{TEXT}}
+
+
+
+\introduction  %% \introduction[modified heading if necessary]
+%TEXT
+
+Tracking of tropical cyclones, extratropical cyclones and AEWs.
+
+- GFDL tracker uses latitude-longitude arcs which can cause issues at high latitudes
+- cite Bosler paper, indicate algorithm does not currently support unstructured grids
+
+\textbf{Extratropical cyclones}
+
+Manual counts of cyclones were performed by \cite{petterssen1956weather} in the Northern hemisphere from 1899-1939, and latter binned by \cite{klein1957principle} to determine the spatial distribution of such storms.  These techniques were later refined by \cite{whittaker1982atlas} by accounting for cyclone trajectories.  A similar survey in the Southern hemisphere was performed by \cite{taljaard1967development} for July 1957 - December 1958.  Manual tracking and characterization of cyclones was also performed by \cite{akyildiz1985systematic} using ECMWF forecast data for the 1981/82 winter.
+
+One of the first automated detection and tracking for extratropical cyclones was developed by \cite{williamson1981storm} using nonlinear optimization to fit cyclonic profiles to anomalies in the 500-mb geopotential height field.  Storms were then tracked over a short forecast period using the best fit to the cyclone's centerpoint.
+
+Counts of cyclones neglecting the cyclone trajectory were automatically generated from climate model output for both hemispheres by \cite{lambert1988cyclone} using local minima in 1000-hPa geopotential height.  This method had some shortcomings, including mischaracterization of local lows due to Gibbs' ringing and topographically-driven lows.  To overcome these problems, \cite{alpert1990climatological} proposed an additional minimum threshold on the local pressure gradient.  Similarly, \cite{le1990comparison} detected cyclones in ECMWF pressure data using a local minima in the sea-level pressure that must also be 4 mb below the average sea-level pressure of neighboring grid points, and must persist for three successive 6- or 12- hour intervals.
+
+Closed contours were first employed by \cite{bell198915}, who used a 30m 500 mb geopotential height contour to identify closed circulation centers.  Their approach used radial arms generated at 15$^\circ$ intervals over a great circle distance of 2$^\circ$ and required that geopotential heights rise by at least 30m along each arm.  Unfortunately, one shortfall of this approach is that it does not guarantee the presence of a closed contour at high model resolution.
+
+\cite{murray1991numerical} extracted low pressure centers from interpolated GCM data using local optimization, based on earlier work in \cite{rice1982durivation}.
+
+Feature tracking on the sphere was revisited by \cite{hodges1995feature}, which extended tracking algorithms designed for Cartesian geometry \cite{hodges1994general} that were built from image processing techniques.
+
+Storm tracks and African easterly waves were tracked by \cite{hodges2003comparison}.
+
+\cite{konig1993objective} uses minima in the 1000 hPa geopotential height to identify cyclones with associated maxima in the 850 hPa vorticity.
+
+\textbf{Tropical cyclones}
+
+Nonetheless, the definition of an optimal objective criteria for atmospheric features has eluded development, suggesting that there may be no singular criteria capable of both perfect detection and zero false positive rate.  It is widely acknowledged that weaker tropical storms are difficult to track, and the observational record of these less-intense, short-lived storms is questionable \citep{Landsea2010}.
+
+Automated tropical cyclone tracking has received particular attention throughout the literature.  Published techniques generally rely on identifying TC candidates as near-surface (generally 850hPa) local vorticity maxima or as local sea level pressure minima.  To eliminate extratropical cyclones and weak cyclonic depressions, it is further required that the candidate be associated with a nearby warm core and be associated with a minimum threshold on surface winds for at least 1-3 days.  The definition of a ``warm core'' varies between modeling centers, including such options as air temperature anomaly on pressure surfaces \citep{Vitart1997,Zhao2009,Murakami2012}, geopotential thickness \citep{Tsutsui1996} and decay of vorticity with height \citep{Bengtsson2007,Strachan2013}.  Additional filtering of candidate storms over topography or within a specified latitudinal range may be required.  To better match observations, additional geographical, model or feature-dependent criteria may be applied \citep{Camargo2002,Walsh2007,Murakami2010,Murakami2012}.
+
+\textbf{African Easterly Waves}
+
+A similar manual study to \cite{akyildiz1985systematic} was performed by \cite{reed1988evaluation} to detect and track African easterly waves.
+
+%tunability of parameters, support for unstructured grids, works at all latitudes
+%can be used for both TCs and ETCs (even AEWs)
+
+\section{Algorithms}
+
+In terms of regular latitude-longitude coordinates, great circle distance between points $(\lambda_1, \varphi_1)$ and $(\lambda_2, \varphi_2)$ is defined via the symmetric operation
+\begin{equation}
+r(\lambda_1, \varphi_1; \lambda_2, \varphi_2) = a \arccos \left( \sin \varphi_1 \sin \varphi_2 + \cos \varphi_1 \cos \varphi_2 \cos (\lambda_1 - \lambda_2) \right).
+\end{equation}
+
+For nearest neighbor search \texttt{nearest\_neighbor(P, f)}, we employ a three-dimensional KD tree \citep{bentley1975multidimensional} using the implementation of \cite{tsiombikas2015kdtree}.  A key advantage of KD trees is their relatively efficient $O(\log n)$ nearest neighbor search.
+
+\subsection{MapReduce}
+
+At high horizontal resolutions, climate datasets become increasingly unwieldy to store and analyze.  Simultaneously, single-core computing systems have effectively reached peak performance, and so  supercomputing systems have been forced to adopt massively parallel infrastructure.  To address the need for feature tracking in multi-decadal high-resolution ensemble datasets, algorithms based on MapReduce have been developed \citep{Prabhat2012,Zarzycki2014}.  In this case, candidates are first isolated on individual time slices (in an embarrassingly parallel manner), and then stitched across time to build trajectories.  For detection codes based on MapReduce, parallel performance is usually bottlenecked by file system access times (I/O).
+
+\subsection{Unstructured Grid Specification}
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=4in]{UnstructuredGrid.pdf}
+\end{center}
+\caption{An example unstructured grid.}
+\end{figure}
+
+\subsection{Extrema Detection}
+
+\noindent \begin{tabular}{|p{5in}|}
+\hline \begin{verbatim}
+set P = find_all_minima(field G)
+  for each cell f
+    is_minima[f] = true
+    for each neighbor cell v of f
+      if G[v] < G[f] then
+        is_minima[f] = false
+    if is_minima[f] then
+      insert f into P
+\end{verbatim} \\
+\hline
+\end{tabular}
+
+\noindent \begin{tabular}{|p{5in}|}
+\hline \begin{verbatim}
+set Q = merge_candidates_minima(field G, set P, dist)
+  K = build_kd_tree(P)
+  for each candidate p in P
+    retain_p = true
+    N = all_neighbors(K, p, dist)
+    for all q in N
+      if (G[q] < G[p]) then retain_p = false
+    if retain_p then insert p into Q
+\end{verbatim} \\
+\hline
+\end{tabular}
+
+\subsection{Closed Contour Criteria}
+
+\noindent \begin{tabular}{|p{5in}|}
+\hline \begin{verbatim}
+point pmax = find_max_near(point p, field G, maxdist)
+  set visited = {}
+  set tovisit = {p}
+  pmax = p
+  while tovisit is not empty
+    q = remove point from tovisit
+    if (q in visited) then continue
+    add q to visited
+    if (gcdist(p,q) > maxdist) then continue
+    if (G[q] > G[pmax]) then pmax = q
+\end{verbatim} \\
+\hline
+\end{tabular}
+
+\noindent \begin{tabular}{|p{5in}|}
+\hline \begin{verbatim}
+closed_contour(point p, field G, dist, maxdist, thresh)
+  p0 = find_max_near(p, G, maxdist)
+  set visited = {}
+  set tovisit = {p0}
+  while tovisit is not empty
+    q = remove point from tovisit
+    if (q in visited) then continue
+    add q to visited
+    if (gcdist(p0,q) > dist) then return false
+    if (G[p0] - G[q] < thresh) then
+      add all neighbors of q to tovisit
+  return true
+\end{verbatim} \\
+\hline
+\end{tabular}
+
+An analogous algorithm \texttt{no\_closed\_contour}() is also provided, which has similar functionality but discards candidates that satisfy the closed contour criteria.
+
+\begin{figure}[H]
+\begin{center}
+\includegraphics[width=5in]{ClosedContourCriteria2.pdf}
+\end{center}
+\caption{An illustration of the closed contour criteria.  Cells shaded in white (gray) satisfy (do not satisfy) the threshold of the field value at \texttt{p0}.  Since only edge-neighbors are included, \texttt{B} constitutes a boundary to the interior of the closed contour.  Because \texttt{A} lays outside the solid circle, the contour with distance $d_0$ is not a closed contour, but the dashed contour with distance $d_1$ is a closed contour.}
+\end{figure}
+
+\subsection{Thresholding}
+
+\noindent \begin{tabular}{|p{5in}|}
+\hline \begin{verbatim}
+threshold(point p, field G, dist, thresh)
+  p0 = find_max_near(p, G, dist)
+  if (G[p0] < thresh) then
+    return false
+  else
+    return true
+\end{verbatim} \\
+\hline
+\end{tabular}
+
+\subsection{Stitching}
+
+\noindent \begin{tabular}{|p{5in}|}
+\hline \begin{verbatim}
+path set S = stitch_nodes(P[1..T], dist)
+  for each time level t = 1..T
+    K[t] = build_kd_tree(P[t])
+  for each time level t = 1..T
+    while P[t] is not empty
+      initialize empty path s
+      p = remove next candidate from P[t]
+      add p into s
+      for time level u = t+1..T
+        q = kd_tree_nearest_neighbor(K[u], p)
+        if (q in P[u]) and (gcdist(p,q) < dist) then
+          add q into s
+          remove q from P[u]
+          p = q
+        else break
+      add s into S
+\end{verbatim} \\
+\hline
+\end{tabular}
+
+\section{Validation}
+
+\subsection{Tropical Cyclones}
+
+\subsection{Extratropical Cyclones}
+
+\subsection{African Easterly Waves}
+
+\conclusions
+
+\pagebreak
+\begin{acknowledgements}
+
+\end{acknowledgements}
+\pagebreak
+
+\appendix
+\subsection{Software Documentation: DetectCyclonesUnstructured}
+
+\begin{verbatim}
+Usage: DetectCyclonesUnstructured <parameter list>
+Parameters:
+  --in_data <string> [""] 
+  --in_connect <string> [""] 
+  --out <string> [""] 
+  --searchbymin <string> [""] (default PSL)
+  --searchbymax <string> [""] 
+  --maxlat <double> [0.000000] (degrees)
+  --minlat <double> [0.000000] (degrees)
+  --topofile <string> [""] 
+  --maxtopoht <double> [0.000000] (m)
+  --mergedist <double> [0.000000] (degrees)
+  --closedcontourcmd <string> [""] [var,dist,delta,minmaxdist;...]
+  --noclosedcontourcmd <string> [""] [var,dist,delta,minmaxdist;...]
+  --thresholdcmd <string> [""] [var,op,value,dist;...]
+  --outputcmd <string> [""] [var,op,dist;...]
+  --timestride <integer> [1] 
+  --regional <bool> [false] 
+  --out_header <bool> [false] 
+  --verbosity <integer> [0] 
+\end{verbatim}
+
+\begin{itemize}
+\item[] \texttt{--in\_data <string>} \\ The input datafile in NetCDF format.
+\item[] \texttt{--in\_connect <string>} \\ A connectivity file, which uses a vertex list to describe the graph structure of the input grid.  This parameter is not required if the data is on a latitude-longitude grid.
+\item[] \texttt{--out <string>} \\ The output file containing the filtered list of candidates in plain text format.
+\item[] \texttt{--searchbymin <string>} \\ The input variable to use for initially selecting candidate points (defined as local minima).  By default this is ``PSL'', representing detection of surface pressure minima.  Only one of \texttt{searchbymin} and \texttt{searchbymax} may be set.
+\item[] \texttt{--searchbymax <string>} \\ The input variable to use for initially selecting candidate points (defined as local maxima).  Only one of \texttt{searchbymin} and \texttt{searchbymax} may be set.
+\item[] \texttt{--maxlat <double>} \\ The maximum absolute latitude for candidate points.  Candidates at higher latitudes are discarded.
+\item[] \texttt{--minlat <double>} \\ The minimum absolute latitude for candidate points.  Candidates at lower latitudes are discarded.
+\item[] \texttt{--topofile <string>} \\ An auxiliary file containing topographic information.
+\item[] \texttt{--maxtopoht <double>} \\ If \texttt{--topofile} is specified, discard candidates over topography higher than specified by this parameter.
+\item[] \texttt{--mergedist <double>} \\ Merge candidate points with distance (in degrees) shorter than the specified value.  Among two candidates within the merge distance, only the candidate with lowest \texttt{searchbymin} or highest \texttt{searchbymax} value will be retained. 
+\item[] \texttt{--closedcontourcmd <cmd1>;<cmd2>;...} Eliminate candidates if they do not have a closed contour.  Closed contour commands are separated by a semi-colon.  Each closed contour command takes the form \texttt{var,dist,delta,pivotdist}.  These arguments are as follows.
+\begin{itemize}
+\item[] \texttt{var <variable>}  The variable used for the contour search.
+\item[] \texttt{dist <double>}  The great-circle distance (in degrees) from the pivot within which the closed contour criteria must be satisfied.
+\item[] \texttt{delta <double>}  The amount by which the field must change from the pivot value.  If positive (negative) the field must increase (decrease) by this value along the contour.
+\item[] \texttt{pivotdist <double>}  The distance away from the candidate to search for the pivot.  If \texttt{delta} is positive (negative), the pivot is a local minimum (maximum).
+\end{itemize}
+\item[] \texttt{--noclosedcontourcmd <cmd1>;<cmd2>;...} \\ As \texttt{closedcontourcmd}, except eliminates candidates if a closed contour is present.
+\item[] \texttt{--thresholdcmd <cmd1>;<cmd2>;...}  Eliminate candidates that do not satisfy a threshold criteria (there must exist a point within a given distance of the candidate that satisfies a given equality or inequality).  Threshold commands are separated by a semi-colon.  Each threshold command takes the form \texttt{var,op,value,dist}.  These arguments are as follows.
+\begin{itemize}
+\item[] \texttt{var <variable>}  The variable used for the contour search.
+\item[] \texttt{op <string>}  Operator that must be satisfied for threshold (options include \texttt{>}, \texttt{>=}, \texttt{<}, \texttt{<=}, \texttt{=}, \texttt{!=}).
+\item[] \texttt{value <double>}  The value on the RHS of the comparison.
+\item[] \texttt{dist <double>}  The great circle distance away from the candidate to search for a point that satisfies the threshold (in degrees).
+\end{itemize}
+\item[] \texttt{--outputcmd <cmd1>;<cmd2>;...}  Include additional columns in the output file.  Output commands take the form \texttt{var,op,dist}. These arguments are as follows.
+\begin{itemize}
+\item[] \texttt{var <variable>}  The variable used for the contour search.
+\item[] \texttt{op <string>}  Operator that is applied over all points within the specified distance of the candidate (options include \texttt{max}, \texttt{min}, \texttt{avg}, \texttt{maxdist}, \texttt{mindist}).
+\item[] \texttt{dist <double>}  The great circle distance away from the candidate wherein the operator is applied (in degrees).
+\end{itemize}
+\item[] \texttt{--timestride <integer>} \\ Only examine discrete times at the given stride (by default 1).
+\item[] \texttt{--regional} \\ When a latitude-longitude grid is employed, do not consider longitudinal boundaries to be periodic.
+\item[] \texttt{--out\_header} \\ Output a header describing the columns of the data file.
+\item[] \texttt{--verbosity <integer>} \\ Set the verbosity level (default 0).
+\end{itemize}
+
+\subsubsection{Variable Specification}
+
+Quantities of type \texttt{<variable>} include both NetCDF variables in the input file (for example, ``Z850'') and simple operations performed on those variables.  By default it is assumed that NetCDF variables are specified in the \texttt{.nc} file as
+\begin{center}
+\texttt{float Z850(time, lat, lon)} \quad or \quad \texttt{float Z850(time, ncol)}
+\end{center} for structured latitude-longitude grids and unstructured grids, respectively.  If variables have no time variable, they have the related specification
+\begin{center}
+\texttt{float Z850(lat, lon)} \quad or \quad \texttt{float Z850(ncol)}
+\end{center}  If variables include an additional dimension, for instance,
+\begin{center}
+\texttt{float Z(time, lev, lat, lon)} \quad or \quad \texttt{float Z(time, lev, ncol)}
+\end{center} they may be specified on the command-line as $\texttt{Z(<lev>)}$, where the integer index \texttt{<lev>} corresponds to the first dimension (or the dimension after \texttt{time}, if present).  
+
+Simple operations on variables are also supported, including
+\begin{itemize}
+\item[] \texttt{\_VECMAG(<variable>, <variable>)} 2-component vector magnitude,
+\item[] \texttt{\_PLUS(<variable>, <variable>)} Pointwise sum of variables,
+\item[] \texttt{\_DIFF(<variable>, <variable>)} Pointwise difference of variables.
+\end{itemize}  The following are valid examples of \texttt{<variable>} type,
+\begin{center}
+\texttt{\_VECMAG(U850, V850)} \quad and \quad \texttt{\_DIFF(U(3),U(5))}.
+\end{center}
+
+\subsection{Software Documentation: StitchNodes}
+
+\begin{verbatim}
+Usage: StitchNodes <parameter list>
+Parameters:
+  --in <string> [""] 
+  --out <string> [""] 
+  --format <string> ["no,i,j,lon,lat"] 
+  --range <double> [5.000000] (degrees)
+  --minlength <integer> [3] 
+  --min_endpoint_dist <double> [0.000000] (degrees)
+  --min_path_dist <double> [0.000000] (degrees)
+  --maxgap <integer> [0] 
+  --threshold <string> [""] [col,op,value,count;...]
+  --timestride <integer> [1] 
+  --out_format <string> ["std"] (std|visit)
+\end{verbatim}
+
+\begin{itemize}
+\item[] \texttt{--in <string>} \\ The input file (a list of candidates from DetectCyclonesUnstructured).
+\item[] \texttt{--out <string>} \\ The output file containing the filtered list of candidates in plain text format.
+\item[] \texttt{--format <string>} \\ The structure of the columns of the input file.
+\item[] \texttt{--range <double>} \\ The maximum distance between candidates along a path.
+\item[] \texttt{--minlength <integer>} \\ The minimum length of a path (in terms of number of discrete times).
+\item[] \texttt{--min\_endpoint\_dist <double>} \\ The minimum great-circle distance between the first candidate on a path and the last candidate (in degrees).
+\item[] \texttt{--min\_path\_dist <double>} \\ The minimum path length, defined as the sum of all great-circle distances between candidate nodes (in degrees).
+\item[] \texttt{--maxgap <integer>} \\ The largest gap (missing candidate nodes) along the path (in discrete time points).
+\item[] \texttt{--threshold <cmd1>;<cmd2>;...} \\  Eliminate paths that do not satisfy a threshold criteria (a specified number of candidates along path must satisfy an equality or inequality).  Threshold commands are separated by a semi-colon.  Each threshold command takes the form \texttt{col,op,value,count}.  These arguments are as follows.
+\begin{itemize}
+\item[] \texttt{col <integer>}  The column in the input file to use in the threshold criteria.
+\item[] \texttt{op <string>}  Operator used for comparison of column value (options include \texttt{>}, \texttt{>=}, \texttt{<}, \texttt{<=}, \texttt{=}, \texttt{!=}).
+\item[] \texttt{value <double>}  The value on the right-hand-side of the operator. 
+\item[] \texttt{count <integer>}  The minimum number of candidates along the path that must satisfy this criteria.
+\end{itemize}
+\item[] \texttt{--timestride <integer>} \\ Only examine discrete times at the given stride (by default 1).
+\end{itemize}
+
+
+
+\bibliography{FeatureTrackingBibliography}
+\bibliographystyle{copernicus}
+
+\end{document}
