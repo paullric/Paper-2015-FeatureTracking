@@ -158,7 +158,7 @@ At high horizontal resolutions, climate datasets become increasingly unwieldy to
 This section describes the building blocks that have been utilized in constructing our detection and characterization framework.  As mentioned earlier, in order to avoid sensitivity of the detection scheme to grid resolution, great circle distance has been employed throughout.  In terms of regular latitude-longitude coordinates, great circle distance between points $(\lambda_1, \varphi_1)$ and $(\lambda_2, \varphi_2)$ is defined via the symmetric operation
 \begin{equation}
 r(\lambda_1, \varphi_1; \lambda_2, \varphi_2) = a \arccos \left( \sin \varphi_1 \sin \varphi_2 + \cos \varphi_1 \cos \varphi_2 \cos (\lambda_1 - \lambda_2) \right).
-\end{equation}
+\end{equation}  Algorithmically, this calculation is implemented as \texttt{gcdist(p,q)} for given graph nodes \texttt{p} and \texttt{q}.
 
 \subsection{Efficient neighbor search using $k$-d Trees}
 
@@ -305,9 +305,13 @@ threshold_max(node p, field G, dist, thresh)
 
 \subsection{Stitching}
 
-\noindent \begin{tabular}{|p{5in}|}
+The basic stitching procedure is implemented in Algorithm \ref{alg:stitch_nodes}.
+
+\begin{algorithm}
+\caption{Determine all feature paths \texttt{S}, given array of nodes \texttt{P$[$1..T$]$} and maximum great-circle distance between nodes at subsequent time levels \texttt{dist}.\ \\} \label{alg:stitch_nodes}
+\noindent \begin{tabular}{p{5in}}
 \hline \begin{verbatim}
-path set S = stitch_nodes(P[1..T], dist)
+path set S = stitch_nodes(set array P[1..T], dist)
   for each time level t = 1..T
     K[t] = build_kd_tree(P[t])
   for each time level t = 1..T
@@ -326,14 +330,58 @@ path set S = stitch_nodes(P[1..T], dist)
 \end{verbatim} \\
 \hline
 \end{tabular}
+\end{algorithm}
 
-\section{Validation}
+\section{Selected examples}
 
-\subsection{Tropical Cyclones}
+A few selected examples of the feature detection tool are now provided.  The first three examples use data from the NCEP Climate Forecast System Reanalysis (CFSR), available at 0.5 degree global resolution with 6-hourly output from 1979-present \citep{saha2010ncep}.
 
-\subsection{Extratropical Cyclones}
+\subsection{Tropical cyclones in CFSR} \label{sec:TropicalCycloneExample}
 
-\subsection{African Easterly Waves}
+The command line we use to detect tropical cyclone-like features in CFSR is provided below.  Three-dimensional (time + 2D space) hyperslabs of CFSR data have been extracted, with \texttt{TMP\_L100} corresponding to 400hPa air temperature, and \texttt{U\_GRD\_L100} and \texttt{V\_GRD\_L100} corresponding to 850hPa zonal and meridional velocities.  Candidates are initially identified by minima in the sea level pressure (\texttt{PRMSL\_L101}), and then eliminated if a smaller minimum exists within a great circle distance of 2.0 degrees.  The closed contour criteria is then applied, requiring an increase in SLP of at least 200Pa over a distance of 4 degrees away from the candidate node, and a decrease in 400hPa air temperature of 0.4K within 8 degrees of the node within 1.1 degrees of the candidate with maximum air temperature.  Since CFSR is on a structured latitude-longitude grid, the output format is \texttt{i,j,lon,lat,psl,maxu,zs}, where \texttt{i,j} are the longitude and latitude coordinates within the dataset, \texttt{lon,lat} are the actual longitude and latitude of the candidate, \texttt{psl} is the SLP at the candidate point (equal to the maximum SLP within 0 degrees of the candidate), \texttt{maxu} is the vector magnitude of the maximum 850 hPa wind within 4 degrees of the candidate, and \texttt{zs} is the topographic height at the candidate point.
+
+{\small \begin{verbatim}
+  ./DetectCyclonesUnstructured    --in_data "$uvfile;$tpfile;$hfile" --out $outf    --searchbymin PRMSL_L101    --mergedist 2.0    --closedcontourcmd "PRMSL_L101,200.,4,0;
+       TMP_L100,-0.4,8.0,1.1"    --outputcmd "PRMSL_L101,max,0;
+       _VECMAG(U_GRD_L100,V_GRD_L100),max,4;
+       HGT_L1,max,0"
+\end{verbatim}}
+
+All outputs from DetectCyclonesUnstructured are then concatenated into a single file containing candidates at all times (\texttt{pgbhnl.dcu\_tc\_all.dat}).  Candidates are then stitched in time to form paths, with a maximum distance between candidates of 8.0 degrees (great circle distance), consisting of at least 8 candidates per path, and with a maximum gap size of 2 (most consecutive timesteps with no associated candidate).  Because localized low-pressure regions that are unrelated to tropical cyclones can form as a consequence of topographic forcing, we also require that for at least 8 time steps the underlying topographic height (\texttt{zs}) be at most 100 meters.  The associated command line for StitchNodes is:
+
+{\small \begin{verbatim}
+  ./StitchNodes    --in pgbhnl.dcu_tc_all.dat    --out pgbhnl.dcu_tc_stitch.dat    --format "i,j,lon,lat,psl,maxu,zs"    --range 8.0 --minlength 8 --maxgap 2    --threshold "zs,<=,100.0,8"
+\end{verbatim}}
+
+Once the complete set of tropical cyclone paths have been computed, total tropical cyclone density over each 0.5 degree grid cell is plotted in Figure \ref{fig:TropicalCycloneDensity}.  Overall the results show very good agreement with reference fields ({\color{red}Citation?}).
+
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=4in, clip, trim=0.2cm 3.6cm 0.2cm 3.1cm]{plot-cfsr_tc_density.pdf}
+\end{center}
+\caption{Tropical cyclone count over the period 1979-2010 obtained using the procedure described in section \ref{sec:TropicalCycloneExample}.} \label{fig:TropicalCycloneDensity}
+\end{figure}
+
+\subsection{Extratropical cyclones in CFSR} \label{sec:ExtratropicalCycloneExample}
+
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=4in, clip, trim=0.2cm 3.6cm 0.2cm 3.1cm]{plot-cfsr_etc_density.pdf}
+\end{center}
+\caption{Extratropical cyclone count over the period 1979-2010 obtained using the procedure described in section \ref{sec:ExtratropicalCycloneExample}.} \label{fig:ExtratropicalCycloneDensity}
+\end{figure}
+
+\subsection{Tropical easterly waves in CFSR} \label{sec:TropicalEasterlyWavesExample}
+
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=4in, clip, trim=0.2cm 3.6cm 0.2cm 3.1cm]{plot-cfsr_tew_density.pdf}
+\end{center}
+\caption{Tropical easterly wave density over the period 1979-2010 obtained using the procedure described in section \ref{sec:TropicalEasterlyWaveExample}.} \label{fig:TropicalEasterlyWaveDensity}
+\end{figure}
+
+
+\subsection{Tropical cyclones in a simulation with variable-resolution CESM}
 
 \conclusions
 
