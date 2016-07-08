@@ -111,7 +111,7 @@ This paper presents a general software tool for pointwise feature tracking that.
 \item[] ...allows for easy intercomparison of detection schemes by enabling all detection criteria to be specified on the command line.
 \end{itemize}
 
-As observed by Neu et al. and others, feature tracking schemes can produce wildly varying results depending on the specific choice of threshold variables and values.  Consequently, we argue that conclusions drawn from these tracking schemes should use an ensemble of detection schemes.
+As observed by \cite{neu2013imilast} and others, feature tracking schemes can produce wildly varying results depending on the specific choice of threshold variables and values.  Consequently, we argue that conclusions drawn from these tracking schemes should use an ensemble of detection schemes.
 
 \subsection{Extratropical cyclones}
 
@@ -310,7 +310,7 @@ The basic stitching procedure is implemented in Algorithm \ref{alg:stitch_nodes}
 \begin{algorithm}
 \caption{Determine all feature paths \texttt{S}, given array of nodes \texttt{P$[$1..T$]$} and maximum great-circle distance between nodes at subsequent time levels \texttt{dist}.\ \\} \label{alg:stitch_nodes}
 \noindent \begin{tabular}{p{5in}}
-\hline \begin{verbatim}
+\hline \small \begin{verbatim}
 path set S = stitch_nodes(set array P[1..T], dist)
   for each time level t = 1..T
     K[t] = build_kd_tree(P[t])
@@ -341,7 +341,7 @@ A few selected examples of the feature detection tool are now provided.  The fir
 The command line we use to detect tropical cyclone-like features in CFSR is provided below.  Three-dimensional (time + 2D space) hyperslabs of CFSR data have been extracted, with \texttt{TMP\_L100} corresponding to 400hPa air temperature, and \texttt{U\_GRD\_L100} and \texttt{V\_GRD\_L100} corresponding to 850hPa zonal and meridional velocities.  Candidates are initially identified by minima in the sea level pressure (\texttt{PRMSL\_L101}), and then eliminated if a smaller minimum exists within a great circle distance of 2.0 degrees.  The closed contour criteria is then applied, requiring an increase in SLP of at least 200Pa over a distance of 4 degrees away from the candidate node, and a decrease in 400hPa air temperature of 0.4K within 8 degrees of the node within 1.1 degrees of the candidate with maximum air temperature.  Since CFSR is on a structured latitude-longitude grid, the output format is \texttt{i,j,lon,lat,psl,maxu,zs}, where \texttt{i,j} are the longitude and latitude coordinates within the dataset, \texttt{lon,lat} are the actual longitude and latitude of the candidate, \texttt{psl} is the SLP at the candidate point (equal to the maximum SLP within 0 degrees of the candidate), \texttt{maxu} is the vector magnitude of the maximum 850 hPa wind within 4 degrees of the candidate, and \texttt{zs} is the topographic height at the candidate point.
 
 {\small \begin{verbatim}
-  ./DetectCyclonesUnstructured    --in_data "$uvfile;$tpfile;$hfile" --out $outf    --searchbymin PRMSL_L101    --mergedist 2.0    --closedcontourcmd "PRMSL_L101,200.,4,0;
+  ./DetectCyclonesUnstructured    --in_data "$uvfile;$tpfile;$hfile" --out $outf    --searchbymin PRMSL_L101 --mergedist 2.0    --closedcontourcmd "PRMSL_L101,200.,4,0;
        TMP_L100,-0.4,8.0,1.1"    --outputcmd "PRMSL_L101,max,0;
        _VECMAG(U_GRD_L100,V_GRD_L100),max,4;
        HGT_L1,max,0"
@@ -353,9 +353,9 @@ All outputs from DetectCyclonesUnstructured are then concatenated into a single 
   ./StitchNodes    --in pgbhnl.dcu_tc_all.dat    --out pgbhnl.dcu_tc_stitch.dat    --format "i,j,lon,lat,psl,maxu,zs"    --range 8.0 --minlength 8 --maxgap 2    --threshold "zs,<=,100.0,8"
 \end{verbatim}}
 
-Once the complete set of tropical cyclone paths have been computed, total tropical cyclone density over each 0.5 degree grid cell is plotted in Figure \ref{fig:TropicalCycloneDensity}.  Overall the results show very good agreement with reference fields ({\color{red}Citation?}).
+Once the complete set of tropical cyclone paths has been computed, total tropical cyclone density over each 0.5 degree grid cell is plotted in Figure \ref{fig:TropicalCycloneDensity}.  Overall the results show very good agreement with reference fields ({\color{red}Citation?}).
 
-\begin{figure}[h!]
+\begin{figure}
 \begin{center}
 \includegraphics[width=4in, clip, trim=0.2cm 3.6cm 0.2cm 3.1cm]{plot-cfsr_tc_density.pdf}
 \end{center}
@@ -363,6 +363,22 @@ Once the complete set of tropical cyclone paths have been computed, total tropic
 \end{figure}
 
 \subsection{Extratropical cyclones in CFSR} \label{sec:ExtratropicalCycloneExample}
+
+The command line we have used to detect cyclonic features without the characteristic warm-core of tropical cyclones (here referred to as extratropical cyclones) is given below.  The command is identical to the TC detection configuration specified in section \ref{sec:TropicalCycloneExample}, except requiring that the feature does not possess a closed contour in the 400hPa temperature field (no warm core).
+
+{\small \begin{verbatim}
+  ./DetectCyclonesUnstructured    --in_data "$uvfile;$tpfile;$hfile" --out $outf    --searchbymin PRMSL_L101 --mergedist 2.0    --closedcontourcmd "PRMSL_L101,200.,4,0?    --noclosedcontourcmd "TMP_L100,-0.4,8.0,1.1?    --outputcmd "PRMSL_L101,max,0;
+       _VECMAG(U_GRD_L100,V_GRD_L100),max,4;
+       HGT_L1,max,0"
+\end{verbatim}}
+
+Stitching is similarly analogous to section \ref{sec:TropicalCycloneExample}, except using a slightly more strict criteria on the underlying topographic height.  The topographic filtering proved necessary in order to adequately filter out an abundance of topographically-driven low pressure systems, particularly in the Himalayas region.  The command line used for stitching is given below:
+
+{\small \begin{verbatim}
+  ./StitchNodes    --in pgbhnl.dcu_tc_all.dat    --out pgbhnl.dcu_tc_stitch.dat    --format "i,j,lon,lat,psl,maxu,zs"    --range 8.0 --minlength 8 --maxgap 2    --threshold "zs,<=,70.0,8"
+\end{verbatim}}
+
+Once the complete set of extratropical cyclone paths has been computed, total tropical cyclone density over each 0.5 degree grid cell is plotted in Figure \ref{fig:ExtratropicalCycloneDensity}.  Although not extensively verified, the qualitative density of extratropical cyclones is well within the range of results from different trackers, as given by \cite{neu2013imilast}.
 
 \begin{figure}[h!]
 \begin{center}
@@ -373,7 +389,14 @@ Once the complete set of tropical cyclone paths have been computed, total tropic
 
 \subsection{Tropical easterly waves in CFSR} \label{sec:TropicalEasterlyWavesExample}
 
-\begin{figure}[h!]
+{\small \begin{verbatim}
+  ./DetectCyclonesUnstructured    --in_data "$uvfile;$hfile" --out $outf    --searchbymax "ABS_V_L100(1)" --mergedist 2.0    --closedcontourcmd "ABS_V_L100(1),-5.e-5,4,0"    --outputcmd "ABS_V_L100(1),max,0;HGT_L1,max,0"    --maxlat 30.0\end{verbatim}}
+
+{\small \begin{verbatim}
+  ./StitchNodes    --in pgbhnl.dcu_aew_all.dat --out pgbhnl.dcu_aew_stitch.dat    --format "i,j,lon,lat,absv,zs?    --range 4.0 --minlength 8 --maxgap 0    --min_endpoint_dist 16.0    --threshold "lat,>=,0,8"
+\end{verbatim}}
+
+\begin{figure}
 \begin{center}
 \includegraphics[width=4in, clip, trim=0.2cm 3.6cm 0.2cm 3.1cm]{plot-cfsr_tew_density.pdf}
 \end{center}
@@ -381,7 +404,15 @@ Once the complete set of tropical cyclone paths have been computed, total tropic
 \end{figure}
 
 
-\subsection{Tropical cyclones in a simulation with variable-resolution CESM}
+\subsection{Tropical cyclones in a simulation with CESM} \label{sec:TropicalCycloneCESM}
+
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[clip, trim=0.2cm 6.6cm 0.2cm 7.1cm, width=5in]{nhemi-traj_plotted.pdf}
+\includegraphics[clip, trim=0.2cm 6.8cm 0.2cm 7.1cm, width=5in]{nhemi_regrid-traj_plotted.pdf}
+\end{center}
+\caption{Tropical cyclone trajectories and associated intensities as obtained from the simulation of a single hurricane season in CESM \ref{sec:TropicalCycloneCESM} using (top) native ne120 spectral-element grid data and (bottom) data regridded to a regular latitude-longitude grid with 0.25$^\circ$ grid spacing.} \label{fig:TropicalCycloneCESM}
+\end{figure}
 
 \conclusions
 
@@ -418,15 +449,13 @@ Parameters:
 \end{verbatim}
 
 \begin{itemize}
-\item[] \texttt{--in\_data <string>} \\ The input datafile in NetCDF format.
+\item[] \texttt{--in\_data <string>} \\ A list of input datafiles in NetCDF format, separated by semi-colons.
 \item[] \texttt{--in\_connect <string>} \\ A connectivity file, which uses a vertex list to describe the graph structure of the input grid.  This parameter is not required if the data is on a latitude-longitude grid.
 \item[] \texttt{--out <string>} \\ The output file containing the filtered list of candidates in plain text format.
 \item[] \texttt{--searchbymin <string>} \\ The input variable to use for initially selecting candidate points (defined as local minima).  By default this is ``PSL'', representing detection of surface pressure minima.  Only one of \texttt{searchbymin} and \texttt{searchbymax} may be set.
 \item[] \texttt{--searchbymax <string>} \\ The input variable to use for initially selecting candidate points (defined as local maxima).  Only one of \texttt{searchbymin} and \texttt{searchbymax} may be set.
 \item[] \texttt{--maxlat <double>} \\ The maximum absolute latitude for candidate points.  Candidates at higher latitudes are discarded.
 \item[] \texttt{--minlat <double>} \\ The minimum absolute latitude for candidate points.  Candidates at lower latitudes are discarded.
-\item[] \texttt{--topofile <string>} \\ An auxiliary file containing topographic information.
-\item[] \texttt{--maxtopoht <double>} \\ If \texttt{--topofile} is specified, discard candidates over topography higher than specified by this parameter.
 \item[] \texttt{--mergedist <double>} \\ Merge candidate points with distance (in degrees) shorter than the specified value.  Among two candidates within the merge distance, only the candidate with lowest \texttt{searchbymin} or highest \texttt{searchbymax} value will be retained. 
 \item[] \texttt{--closedcontourcmd <cmd1>;<cmd2>;...} Eliminate candidates if they do not have a closed contour.  Closed contour commands are separated by a semi-colon.  Each closed contour command takes the form \texttt{var,dist,delta,pivotdist}.  These arguments are as follows.
 \begin{itemize}
