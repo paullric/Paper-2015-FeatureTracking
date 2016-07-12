@@ -115,11 +115,11 @@ The development of a tracking framework that is robust across essentially arbitr
 \item[] ...allow for easy intercomparison of detection schemes by enabling all detection criteria to be specified on the command line.
 \end{itemize}  Well-known automated software trackers include Kevin Hodges' TRACK code \citep{hodges2015track} and the Geophysical Fluid Dynamics Laboratory (GFDL) TSTORMS package \citep{TSTORMS} {\color{red}Others?}.  Both of these software packages have been used extensively throughout the literature for studies examining pointwise features in the atmosphere, but do not completely satisfy our four requirements above.
 
-Although the precise parameters made throughout the tracking literature vary, there are clearly several core algorithms (kernels) must be exposed to the user.  Kernels include:
+Although the precise parameters made throughout the tracking literature vary, there are clearly several core algorithms (kernels) must be exposed to the user.  The kernels we have focused on include:
 \begin{itemize}
+\item Computation of anomalies in a data field from a spatially averaged mean.
 \item Identification of local extrema in a given 2D data field (for instance, sea level pressure minima).
 \item Determination of whether a closed contour exists in a data field around a particular point.
-\item Computation of anomalies in a data field from a spatially averaged mean.
 \item Determination of whether, in the neighborhood of a particular point, a data field satisfies a given threshold.
 \item Stitching of candidates from sequential time slices to build feature tracks.
 \end{itemize}  Note that identification of local extrema is not a resolution-insensitive procedure, since the number of extrema will often scale with the number of spatial data points, and so initial identification is typically augmented with the more scale-insensitive closed contour criteria (see section \ref{sec:ClosedContour}).
@@ -209,8 +209,12 @@ Several selected examples of the feature detection tool are now provided.  The f
 Our first example is to employ the tracker for tropical cyclones.  The command line we use to detect tropical cyclone-like features in CFSR is provided below.  Three-dimensional (time + 2D space) hyperslabs of CFSR data have been extracted, with \texttt{TMP\_L100} corresponding to 400hPa air temperature, and \texttt{U\_GRD\_L100} and \texttt{V\_GRD\_L100} corresponding to 850hPa zonal and meridional velocities.  Candidates are initially identified by minima in the sea level pressure (\texttt{PRMSL\_L101}), and then eliminated if a smaller minimum exists within a great circle distance of 2.0 degrees.  The closed contour criteria is then applied, requiring an increase in SLP of at least 200Pa over a distance of 4 degrees away from the candidate node, and a decrease in 400hPa air temperature of 0.4K within 8 degrees of the node within 1.1 degrees of the candidate with maximum air temperature.  Since CFSR is on a structured latitude-longitude grid, the output format is \texttt{i,j,lon,lat,psl,maxu,zs}, where \texttt{i,j} are the longitude and latitude coordinates within the dataset, \texttt{lon,lat} are the actual longitude and latitude of the candidate, \texttt{psl} is the SLP at the candidate point (equal to the maximum SLP within 0 degrees of the candidate), \texttt{maxu} is the vector magnitude of the maximum 850 hPa wind within 4 degrees of the candidate, and \texttt{zs} is the topographic height at the candidate point.
 
 {\small \begin{verbatim}
-  ./DetectCyclonesUnstructured    --in_data "$uvfile;$tpfile;$hfile" --out $outf    --searchbymin PRMSL_L101 --mergedist 2.0    --closedcontourcmd "PRMSL_L101,200.,4,0;
-       TMP_L100,-0.4,8.0,1.1"    --outputcmd "PRMSL_L101,max,0;
+  ./DetectCyclonesUnstructured
+    --in_data "$uvfile;$tpfile;$hfile" --out $outf
+    --searchbymin PRMSL_L101 --mergedist 2.0
+    --closedcontourcmd "PRMSL_L101,200.,4,0;
+       TMP_L100,-0.4,8.0,1.1"
+    --outputcmd "PRMSL_L101,max,0;
        _VECMAG(U_GRD_L100,V_GRD_L100),max,4;
        HGT_L1,max,0"
 \end{verbatim}}
@@ -218,7 +222,12 @@ Our first example is to employ the tracker for tropical cyclones.  The command l
 All outputs from DetectCyclonesUnstructured are then concatenated into a single file containing candidates at all times (\texttt{pgbhnl.dcu\_tc\_all.dat}).  Candidates are then stitched in time to form paths, with a maximum distance between candidates of 8.0 degrees (great circle distance), consisting of at least 8 candidates per path, and with a maximum gap size of 2 (most consecutive timesteps with no associated candidate).  Because localized low-pressure regions that are unrelated to tropical cyclones can form as a consequence of topographic forcing, we also require that for at least 8 time steps the underlying topographic height (\texttt{zs}) be at most 100 meters.  The associated command line for StitchNodes is:
 
 {\small \begin{verbatim}
-  ./StitchNodes    --in pgbhnl.dcu_tc_all.dat    --out pgbhnl.dcu_tc_stitch.dat    --format "i,j,lon,lat,psl,maxu,zs"    --range 8.0 --minlength 8 --maxgap 2    --threshold "zs,<=,100.0,8"
+  ./StitchNodes
+    --in pgbhnl.dcu_tc_all.dat
+    --out pgbhnl.dcu_tc_stitch.dat
+    --format "i,j,lon,lat,psl,maxu,zs"
+    --range 8.0 --minlength 8 --maxgap 2
+    --threshold "zs,<=,100.0,8"
 \end{verbatim}}
 
 Once the complete set of tropical cyclone paths has been computed, total tropical cyclone counts over each 0.5 degree grid cell is plotted in Figure \ref{fig:TropicalCycloneDensity}.  Overall the results show very good agreement with reference fields ({\color{red}Citation?}).
@@ -229,7 +238,12 @@ Once the complete set of tropical cyclone paths has been computed, total tropica
 For our second example, we are interested in tracking extratropical cyclone features.  The command line we have used to detect cyclonic features without the characteristic warm-core of tropical cyclones (here referred to as extratropical cyclones) is given below.  The command is identical to the TC detection configuration specified in section \ref{sec:TropicalCycloneExample}, except requiring that the feature does not possess a closed contour in the 400hPa temperature field (no warm core).
 
 {\small \begin{verbatim}
-  ./DetectCyclonesUnstructured    --in_data "$uvfile;$tpfile;$hfile" --out $outf    --searchbymin PRMSL_L101 --mergedist 2.0    --closedcontourcmd "PRMSL_L101,200.,4,0?    --noclosedcontourcmd "TMP_L100,-0.4,8.0,1.1?    --outputcmd "PRMSL_L101,max,0;
+  ./DetectCyclonesUnstructured
+    --in_data "$uvfile;$tpfile;$hfile" --out $outf
+    --searchbymin PRMSL_L101 --mergedist 2.0
+    --closedcontourcmd "PRMSL_L101,200.,4,0?
+    --noclosedcontourcmd "TMP_L100,-0.4,8.0,1.1?
+    --outputcmd "PRMSL_L101,max,0;
        _VECMAG(U_GRD_L100,V_GRD_L100),max,4;
        HGT_L1,max,0"
 \end{verbatim}}
@@ -237,7 +251,12 @@ For our second example, we are interested in tracking extratropical cyclone feat
 Stitching is similarly analogous to section \ref{sec:TropicalCycloneExample}, except using a slightly more strict criteria on the underlying topographic height.  The topographic filtering proved necessary in order to adequately filter out an abundance of topographically-driven low pressure systems, particularly in the Himalayas region.  The command line used for stitching is given below:
 
 {\small \begin{verbatim}
-  ./StitchNodes    --in pgbhnl.dcu_tc_all.dat    --out pgbhnl.dcu_tc_stitch.dat    --format "i,j,lon,lat,psl,maxu,zs"    --range 8.0 --minlength 8 --maxgap 2    --threshold "zs,<=,70.0,8"
+  ./StitchNodes
+    --in pgbhnl.dcu_tc_all.dat
+    --out pgbhnl.dcu_tc_stitch.dat
+    --format "i,j,lon,lat,psl,maxu,zs"
+    --range 8.0 --minlength 8 --maxgap 2
+    --threshold "zs,<=,70.0,8"
 \end{verbatim}}
 
 Once the complete set of extratropical cyclone paths has been computed, total extratropical cyclone density over each 0.5 degree grid cell is plotted in Figure \ref{fig:ExtratropicalCycloneDensity}.  Although not extensively verified, the qualitative density of extratropical cyclones is well within the range of results from different trackers, as given by \cite{neu2013imilast}.
@@ -253,12 +272,18 @@ Tropical easterly waves are our third example of a pointwise feature that has be
     --closedcontourcmd "_DIFF(ABS_V_L100,_F()),-5.e-5,4,0"
     --outputcmd "_DIFF(ABS_V_L100,_F()),max,0;
         HGT_L1,max,0"
-    --maxlat 30.0\end{verbatim}}
+    --maxlat 30.0
+\end{verbatim}}
     
 Tropical easterly wave paths are constructed using a maximum distance of 4$^\circ$ great-circle-distance between subsequent detections, a minimum path length equal to 8 sequential detections and no allowed gaps.  We further require that the easterly waves have a distance of at least 16$^\circ$ between start and endpoints and are present in the northern hemisphere ($\phi \geq 0^\circ$) for at least 8 timesteps.  The command line is as follows.
 
 {\small \begin{verbatim}
-  ./StitchNodes    --in pgbhnl.dcu_aew_all.dat --out pgbhnl.dcu_aew_stitch.dat    --format "i,j,lon,lat,relv,zs"    --range 4.0 --minlength 8 --maxgap 0    --min_endpoint_dist 16.0    --threshold "lat,>=,0,8"
+  ./StitchNodes
+    --in pgbhnl.dcu_aew_all.dat --out pgbhnl.dcu_aew_stitch.dat
+    --format "i,j,lon,lat,relv,zs"
+    --range 4.0 --minlength 8 --maxgap 0
+    --min_endpoint_dist 16.0
+    --threshold "lat,>=,0,8"
 \end{verbatim}}
 
 Counts of tropical easterly waves within each CFSR grid volume are given in Figure \ref{fig:TropicalEasterlyWaveDensity}, showing heavy wave activity throughout the Atlantic and Pacific basins.  Examining the Figure \ref{fig:TropicalCycloneDensity}, it is clear that regions with a northward bulge in tropical Easterly wave activity are also key regions for tropical cyclone development.
@@ -302,7 +327,7 @@ Feature tracking on the sphere was revisited by \cite{hodges1995feature}, which 
 
 \subsection{A Review of Tropical Cyclone Tracking Algorithms} \label{sec:TropicalCycloneAlgorithms}
 
-Extratropical cyclone tracking techniques have been modified in order to support tropical cyclone tracking.  To eliminate ``false positives'' associated with extratropical cyclones and weak cyclonic depressions, many schemes require that the candidate be associated with a nearby warm core and be associated with a minimum threshold on surface winds for at least 1-3 days.  The definition of a ``warm core'' varies between modeling centers, including such options as air temperature anomaly on pressure surfaces \citep{Vitart1997,Zhao2009,Murakami2012}, geopotential thickness \citep{tsutsui1996simulated} and decay of vorticity with height \citep{Bengtsson2007,Strachan2013}.  Additional filtering of candidate storms over topography or within a specified latitudinal range may be required.  To better match observations, additional geographical, model or feature-dependent criteria may be applied \citep{camargo2002improving,Walsh2007,Murakami2010,Murakami2012}. It is widely acknowledged that weaker tropical storms are difficult to track, and the observational record of these less-intense, short-lived storms is questionable \citep{Landsea2010}.
+Extratropical cyclone tracking techniques have been modified in order to support tropical cyclone tracking.  To eliminate ``false positives'' associated with extratropical cyclones and weak cyclonic depressions, many schemes require that the candidate be associated with a nearby warm core and be associated with a minimum threshold on surface winds for at least 1-3 days.  The definition of a ``warm core'' varies between modeling centers, including such options as air temperature anomaly on pressure surfaces \citep{vitart1997simulation,zhao2009simulations,murakami2012future}, geopotential thickness \citep{tsutsui1996simulated} and decay of vorticity with height \citep{Bengtsson2007,strachan2013investigating}.  Additional filtering of candidate storms over topography or within a specified latitudinal range may be required.  To better match observations, additional geographical, model or feature-dependent criteria may be applied \citep{camargo2002improving,walsh2007objectively,Murakami2010,Murakami2012}. It is widely acknowledged that weaker tropical storms are difficult to track, and the observational record of these less-intense, short-lived storms is questionable \citep{Landsea2010}.
 
 A tabulated overview of the thresholds utilized by many of these schemes can be found in \cite{walsh2007objectively}, along with several proposed guidelines on detection schemes.  We extend this tabulation with the following short descriptions of many published schemes.
 
@@ -321,7 +346,11 @@ A tabulated overview of the thresholds utilized by many of these schemes can be 
 
 \item \cite{sugi2002influence}:  Assessed a T106 ($\sim$ 125 km) climate dataset.  Tracking criteria similar to \cite{bengtsson1995hurricane}.  Search is conducted for local PSL minima that are at least $<$ 1020 hPa.  Cyclones are tracked for a minimum of 2 days.
 
-\cite{oouchi2006tropical}:  Assessed a 20 km dataset using a similar technique to \cite{sugi2002influence}.  PSL at storm center must be 2 hPa lower than mean over 7x7 grid box and require that storm center latitude $<$ 45$^\circ$ with an initial position $<$ 30$^\circ$.  Near the storm require relative vorticity at 850 hPa must be $> 3.5 \times 10^{-5} \mbox{s}^{-1}$, maximum wind speed at 850hPa must be $>$ 15 m/s, and the maximum wind speed at 850hPa is larger than at 300hPa.  Further require temperature anomaly sum $\Delta T700+ \Delta T500+ \Delta T300 > 2$ K near storm.  Cyclones are tracked for at least 1.5 days.
+\item \cite{oouchi2006tropical}:  Assessed a 20 km dataset using a similar technique to \cite{sugi2002influence}.  PSL at storm center must be 2 hPa lower than mean over 7x7 grid box and require that storm center latitude $<$ 45$^\circ$ with an initial position $<$ 30$^\circ$.  Near the storm require relative vorticity at 850 hPa must be $> 3.5 \times 10^{-5} \mbox{s}^{-1}$, maximum wind speed at 850hPa must be $>$ 15 m/s, and the maximum wind speed at 850hPa is larger than at 300hPa.  Further require temperature anomaly sum $\Delta T700+ \Delta T500+ \Delta T300 > 2$ K near storm.  Cyclones are tracked for at least 1.5 days.
+
+\item \cite{murakami2010effect}:  Assessed four datasets with resolutions from TL95 ($\sim$ 180 km) to TL959 ($\sim$ 20 km).  Cyclone identification similar to \cite{oouchi2006tropical} with a resolution-dependent relative vorticity criteria.
+
+\item \cite{murakami2012future}:  Assessed four datasets with resolutions from 20 km to 60 km.  Cyclone identification similar to \cite{oouchi2006tropical} with a resolution-dependent relative vorticity and temperature anomaly criteria.  Temperature anomalies are computed against a $10^\circ \times 10^\circ$ grid box.  Additional filtering is applied in the North Indian Ocean requiring maximum wind speed be within 100-200km of storm center.  Tracking incorporates a maximum gap size of 1 (a single time step failure).
 
 \item \cite{vitart1997simulation, vitart1999impact, vitart2001sensitivity}:  Assessed a T42 (2.8$^\circ$, $\sim$ 300 km) dataset.  Search on 850mb relative vorticity maxima $> 3.5 \times 10^{-5} \mbox{s}^{-1}$ with a nearby PSL minimum.  Must possess a warm core within 2$^\circ$ latitude defined as a local average 500mb to 200mb temperature maximum with a decrease of 0.5 K in all directions within 8$^\circ$.  Must possess a local maximum in 200mb - 1000mb thickness with a decrease of 50m in all directions within 8$^\circ$.  When tracking, the minimum distance between storms is 800 km / day, tracks must last at least 2 days and the maximum wind velocity within 8$^\circ$ of the storm center must be 17 m/s for at least 2 (not necessarily consecutive) days.
 
@@ -333,30 +362,19 @@ A tabulated overview of the thresholds utilized by many of these schemes can be 
 
 \item \cite{nguyen2001interannual}:  Similar to \cite{walsh1997tropical}, assessed a 125 km regional dataset over Australia.  Vorticity requirement was changed to 850 hPa relative vorticity $> 1.0 \times 10^{-5} \mbox{s}^{-1}$ with PSL minimum within 250km.  Also required mean wind speed in 500km $\times$ 500km region at 850 hPa was larger than at 300 hPa and a mean tangental wind speed within a radius of 1$^\circ$ and 2.5$^\circ$ greater than 5 m/s.  Cyclones were tracked for a minimum of 1 day, with relaxed criteria after this time.
 
-\cite{walsh2004fine}:  Assessed a 30 km dataset using a similar tracking strategy to \cite{nguyen2001interannual}.  The temperature anomaly was computed against a 1200km longitude $\times$ 400km latitude region, and the mean wind speed was computed over a 800km $\times$ 800km region around the storm.  Further required that V10 $\geq$ 17 m/s near storm.
+\item \cite{walsh2004fine}:  Assessed a 30 km dataset using a similar tracking strategy to \cite{nguyen2001interannual}.  The temperature anomaly was computed against a 1200km longitude $\times$ 400km latitude region, and the mean wind speed was computed over a 800km $\times$ 800km region around the storm.  Further required that V10 $\geq$ 17 m/s near storm.
 
-\cite{mcdonald2005tropical}:  Assessed a $2.5^\circ$ latitude by $3.75^\circ$ longitude dataset.  Search on local maxima of 850hPa relative vorticity with magnitude greater than $5 \times 10^{-5} \mbox{s}^{-1}$ with initial latitude $< 30^\circ$.  Temperature anomalies must satisfy $\Delta T300 > 0$ along the track, $\Delta T300 > 0.5$ K for any two points along the track and $\Delta T300 > \Delta T850$ for any two points along the track, where the anomaly was computed against a $15^\circ \times 15^\circ$ mean.  Cyclones are tracked for a minimum of 2 days.
+\item \cite{mcdonald2005tropical}:  Assessed a $2.5^\circ$ latitude by $3.75^\circ$ longitude dataset.  Search on local maxima of 850hPa relative vorticity with magnitude greater than $5 \times 10^{-5} \mbox{s}^{-1}$ with initial latitude $< 30^\circ$.  Temperature anomalies must satisfy $\Delta T300 > 0$ along the track, $\Delta T300 > 0.5$ K for any two points along the track and $\Delta T300 > \Delta T850$ for any two points along the track, where the anomaly was computed against a $15^\circ \times 15^\circ$ mean.  Cyclones are tracked for a minimum of 2 days.
+
+\item \cite{bengtsson2007how}:  Assessed T63, T213 and T319 datasets.  Required 850hPa relative vorticity minus 250hPa relative vorticity exceed $6 \times 10^{-5} \mbox{s}^{-1}$, that 850 hPa relative vorticity $> 6 \times 10^{-5} \mbox{s}^{-1}$ and that relative vorticity be positive for all levels between 850 hPa and 250 hPa.  Only northern hemisphere cyclones were preserved (latitude $< 60^\circ$).  Cyclones are tracked for a minimum of 1 day.
+
+\item \cite{knutson2007simulation, zhao2009simulations}:  Assessed a $\sim$ 50 km dataset.  Search on absolute 850hPa relative vorticity maxima $> 1.6 \times 10^{-4} \mbox{s}^{-1}$ within $6^\circ \times 6^\circ$ areas with a local minimum in SLP within 2$^\circ$ of the detection.  Further require a maximum in average temperature between 300 hPa and 500 hPa within 2$^\circ$ of the detection that is 1K warmer than the local mean.  Cyclones are tracked for a minimum of 3 days, with a maximum search radius of 400km per 6 hours, and requiring that at least 3 days have a maximum surface wind speed greater than 17 m/s.
+
+\item \cite{strachan2013investigating}:  Assessed datasets from $\sim$ 60km to $\sim$ 270 km.  At T63 resolution, required that 850hPa relative vorticity attain a threshold of $> 6 \times 10^{-5} \mbox{s}^{-1}$, and relative vorticity at 500 hPa and 200 hPa be positive.  Further required that the relative vorticity difference between 850 hPa and 200 hPa $> 6 \times 10^{-5} \mbox{s}^{-1}$.  Cyclones are tracked for a minimum of 1 day.
+
+\item \cite{zarzycki2014multidecadal}:  Assessed a $\sim$ 28km dataset.  Search on SLP minimum with latitude $< 45^\circ$ and absolute 850hPa relative vorticity maxima $> 1.0 \times 10^{-4} \mbox{s}^{-1}$ within 4$^\circ$ .  Require a local maximum 500-200 hPa average temperature within 2$^\circ$ of storm center which decreases by at least 0.8 K at a radius of 5$^\circ$ in all directions.  Cyclones are tracked for a minimum of 2 days, with a maximum search radius of 400km per 6 hours, and requiring that at least 2 days have a maximum surface wind speed is greater than 17 m/s within 4$^\circ$ of the candidate.
 
 \end{itemize}
-
-\cite{mcdonald2005tropical}:  $2.5^\circ$ latitude by $3.75^\circ$ longitude \\
-*ZETA850:  $> 5 \times 10^{-5}$ \\
-Latitude: $<$ 30$^\circ$ \\
-Temp:  $\Delta$T300 $>$ 0 at all points along track, $\Delta$T300 $>$ 0.5K at two points, $\Delta$T300 > $\Delta$T850 at two points (against mean $15^\circ \times 15^\circ$)
-
-\cite{bengtsson2007how}:  T63, T213 and T319 \\
-*ZETA:  ZETA850 - ZETA250 $> 6 \times 10^{-5}$, ZETA850 $> 6 \times 10^{-5}$, ZETA positive at all levels between 850hPa and 250hPa (all for 4 consecutive timesteps)
-Latitude:  Northern hemisphere [0,60N]
-
-\cite{zhao2009simulations}:  $\sim$ 50 km \\
-*ZETA:  ZETA850 $> 1.6 \times 10^{-4}$ within $6^\circ \times 6^\circ$ areas \\
-SLP:  minimum within 2$^\circ$ of vorticity maximum \\
-Temp:  $(T300 + T500)/2$ maximum within 2 deg, 1K warmer than local mean \\
-Wind:  $> 17$ m/s for at least 3 days \\
-Tracking range:  400km \\
-Duration:  3 days
-
-{\color{red}Add Thorncroft and Hodges (2001)}
 
 \subsection{A Review of Tropical Easterly Wave Tracking Algorithms} \label{sec:TropicalEasterlyWaveAlgorithms}
 
