@@ -84,7 +84,7 @@ T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
 
 \begin{abstract}
-This paper describes the TempestExtremes package.
+Automated pointwise feature tracking has emerged as an important and desirable data processing capability in climate science.  Software tools for feature tracking -- typically referred to as ``trackers'' -- have been employed throughout the literature to answer pressing scientific questions on anticipated changes in atmospheric features under climate change.  
 \end{abstract}
 
 
@@ -98,38 +98,40 @@ This paper describes the TempestExtremes package.
 \introduction  %% \introduction[modified heading if necessary]
 %TEXT
 
-The need for automated pointwise feature tracking has emerged as a major data processing challenge in climate science.  These ``trackers'' have been employed throughout the literature to answer scientific questions on the expected changes in important atmospheric features under climate change.  Exploration of the literature on trackers exposes a vast breadth of potential techniques (see Appendix \ref{sec:TropicalCycloneAlgorithms}) that have been applied to climate datasets with varied spatial resolution and temporal frequency.  Nonetheless, the definition of an optimal objective criteria for atmospheric features has eluded development, suggesting that there may be no singular criteria capable of both perfect detection and zero false positive rate.  Further, as observed by \cite{walsh2007objectively} for tropical cyclones and \cite{neu2013imilast} for extratropical cyclones, feature tracking schemes can produce wildly varying results depending on the specific choice of threshold variables and values.  Consequently, we argue that conclusions drawn from these trackers should use an ensemble of detection thresholds and variables.  To this end, it is the goal of this paper to develop and present a unified framework that enables a variety of tracking procedures applicable across effectively arbitrary spatial resolution and temporal frequency.
+Automated pointwise feature tracking has emerged as an important and desirable data processing capability in climate science.  Software tools for feature tracking -- typically referred to as ``trackers'' -- have been employed throughout the literature to answer pressing scientific questions on anticipated changes in atmospheric features under climate change.  Exploration of the literature on trackers exposes a vast breadth of potential techniques (see Appendices \ref{sec:ExtratropicalCycloneAlgorithms}, \ref{sec:TropicalCycloneAlgorithms} and \ref{sec:TropicalEasterlyWaveAlgorithms}) that have been applied to climate datasets with varied spatial resolution and temporal frequency.  Nonetheless, the definition of an optimal objective criteria for key atmospheric features has eluded development, and ambiguity in the formal definition of these features suggests that there may be no singular criteria capable of both perfect detection and zero false positive rate.  Further, as observed by \cite{walsh2007objectively} for tropical cyclones and \cite{neu2013imilast} for extratropical cyclones, feature tracking schemes can produce wildly varying results depending on the specific choice of threshold variables and values.  Consequently, we argue that conclusions drawn from these trackers should use an ensemble of detection thresholds and variables.  To this end, it is the goal of this paper to develop and present a unified framework that enables a variety of tracking procedures applicable across effectively arbitrary spatial resolution and temporal frequency.
 
-On reviewing the existing literature (Appendix \ref{sec:TropicalCycloneAlgorithms}), it quickly emerges that most algorithmic trackers share a common detection procedure:
+Most algorithmic trackers of pointwise features (such as cyclones and eddies) share a common detection procedure:
 \begin{itemize}
-\item[1.] Identify an initial set of candidate points by finding local extrema.  Local extrema can be further isolated, for instance by requiring that the local extrema be sufficiently anomalous when contrasted with their neighbors.  For most cyclonic structures, either minima in the sea level pressure field or maxima in the absolute value of the relative vorticity are used.
-\item[2.] Eliminate candidate points that do not satisfy a prescribed set of thresholds.  For instance, tropical cyclones typically require the presence of an upper-level warm core that is sufficiently near the sea level pressure minima.
+\item[1.] Identify an initial set of candidate points by searching for local extrema.  Local extrema can be further isolated, for instance, by requiring that the local extrema be sufficiently anomalous when contrasted with their neighbors.  For most cyclonic structures, either minima in the sea level pressure field or maxima in the absolute value of the relative vorticity are used.
+\item[2.] Eliminate candidate points that do not satisfy a prescribed set of thresholds.  For instance, tropical cyclones typically require the presence of an upper-level warm core that is sufficiently near the sea level pressure minima that defines the storm center.
 \item[3.] Connect candidate points together in time to generate feature paths, eliminating paths that are of insufficient length or do not meet additional criteria.
-\end{itemize}  The procedure described above fits into a general framework known as MapReduce \citep{dean2008mapreduce}, which is a combination of a Map(), an embarrassingly parallel candidate identification procedure applied to individual time slices, and a Reduce(), which stitches candidates across time to build feature tracks.
+\end{itemize}  The procedure described above fits into a general framework known as MapReduce \citep{dean2008mapreduce}, which is a combination of a Map(), an embarrassingly parallel candidate identification procedure applied to individual time slices, and a Reduce(), which stitches candidates across time to build feature tracks.  A key advantage of employing this framework is that substantial work has been undertaken to understand optimal strategies for parallelization of MapReduce-type algorithms (e.g. \cite{Prabhat2012}) in order to mitigate bottlenecks associated with I/O and load balancing.
 
-The development of a tracking framework that is robust across essentially arbitrary datasets requires some additional considerations.  In particular, we expect that our framework should:
+The development of a framework for feature tracking that is robust across essentially arbitrary datasets requires some additional considerations.  In particular, we expect that our framework should:
 \begin{itemize}
 \item[] ...use great-circle arcs for all distance calculations.  This avoids issues associated with latitude-longitude distance that emerges near the poles.
 \item[] ...support structured and unstructured grids.  This eliminates the need for post-processing of large native-grid output files and enables detection and characterization simultaneous with the model execution.
 \item[] ...not contain hard-coded variable names, so as to ensure robust applicability across reanalysis datasets and applicability to a variety of problems.
-\item[] ...allow for easy intercomparison of detection schemes by enabling all detection criteria to be specified on the command line.
+\item[] ...allow for easy intercomparison of detection schemes by enabling detection criteria and thresholds that are compactly specified on the command line.
 \end{itemize}  Well-known automated software trackers include Kevin Hodges' TRACK code \citep{hodges2015track} and the Geophysical Fluid Dynamics Laboratory (GFDL) TSTORMS package \citep{TSTORMS} {\color{red}Others?}.  Both of these software packages have been used extensively throughout the literature for studies examining pointwise features in the atmosphere, but do not completely satisfy our four requirements above.
 
-Although the precise parameters made throughout the tracking literature vary, there are clearly several core algorithms (kernels) must be exposed to the user.  The kernels we have focused on include:
+Although the actual procedures used for feature tracking vary throughout the literature, a review of this material reveals several core algorithms (kernels) must be exposed to the user.  Based on our analysis, the most commonly employed kernels are as follows:
 \begin{itemize}
 \item Computation of anomalies in a data field from a spatially averaged mean.
 \item Identification of local extrema in a given 2D data field (for instance, sea level pressure minima).
 \item Determination of whether a closed contour exists in a data field around a particular point.
 \item Determination of whether, in the neighborhood of a particular point, a data field satisfies a given threshold.
 \item Stitching of candidates from sequential time slices to build feature tracks.
-\end{itemize}  Note that identification of local extrema is not a resolution-insensitive procedure, since the number of extrema will often scale with the number of spatial data points, and so initial identification is typically augmented with the more scale-insensitive closed contour criteria (see section \ref{sec:ClosedContour}).
+\end{itemize}  It is desirable that any generalization these kernels is insensitive to the spatial resolution of the input data; that is, criteria that require averaging or searching over a discrete number of grid points around each candidate (which is common throughout the early tracking literature) is incompatible with scale insensitivity since detection would be dependent on the spatial resolution of the data. Note that identification of local extrema is not a resolution-insensitive procedure, since the number of extrema will often scale with the number of spatial data points, and so initial identification is typically augmented with the more scale-insensitive closed contour criteria (see section \ref{sec:ClosedContour}).
+
+The remainder of the paper is organized as follows:  Section \ref{sec:Kernels} describes the algorithms and kernels that have been implemented in the TempestExtremes software framework.  Selected examples of tropical cyclone, extratropical cyclone and tropical easterly wave detection are then provided in section \ref{sec:SelectedExamples}, followed by conclusions in section \ref{sec:Conclusions}.  The appendices provide a review of relevant literature on pointwise feature trackers of extratropical cyclones (appendix \ref{sec:ExtratropicalCycloneAlgorithms}), tropical cyclones (appendix \ref{sec:TropicalCycloneAlgorithms}) and tropical easterly waves (appendix \ref{sec:TropicalEasterlyWaveAlgorithms}).  A technical guide to the use of the TempestExtremes tools \texttt{DetectCyclonesUnstructured} and \texttt{StitchNodes} is provided in appendices \ref{sec:DetectCyclonesUnstructuredAppendix} and \ref{sec:StitchNodesAppendix}.
+
+\subsection{Code and Data Availability}
 
 The software described in this manuscript has been released as part of the TempestExtremes software package, and is available for use under the Lesser GNU Public License (LGPL).  All software can be obtained from GitHub here:
 \begin{center}
 \texttt{https://github.com/ClimateGlobalChange/tempestextremes}
 \end{center} 
-
-The remainder of the paper is organized as follows:  Section \ref{sec:Kernels} describes the algorithms and kernels that have been implemented in the TempestExtremes software framework.  Selected examples of tropical cyclone, extratropical cyclone and tropical easterly wave detection are then provided in section \ref{sec:SelectedExamples}, followed by conclusions in section \ref{sec:Conclusions}.  The appendices provide a review of relevant literature on pointwise feature trackers of extratropical cyclones (appendix \ref{sec:ExtratropicalCycloneAlgorithms}), tropical cyclones (appendix \ref{sec:TropicalCycloneAlgorithms}) and tropical easterly waves (appendix \ref{sec:TropicalEasterlyWaveAlgorithms}).  A technical guide to the use of \texttt{DetectCyclonesUnstructured} and \texttt{StitchNodes} is provided in appendices \ref{sec:DetectCyclonesUnstructuredAppendix} and \ref{sec:StitchNodesAppendix}.
 
 %However, there is a growing need for scale-insensitive detection techniques and unstructured grid support that is not well met with existing schemes.  Consequently, it is the goal of this paper is to describe a tracking technique that can be applied on essentially any grid at any resolution, and provide insight into currently available algorithmic techniques underlying modern tracking algorithms.
 
@@ -146,49 +148,49 @@ The remainder of the paper is organized as follows:  Section \ref{sec:Kernels} d
 
 \section{TempestExtremes Algorithms and Kernels} \label{sec:Kernels}
 
-This section describes the building blocks that have been utilized in constructing our detection and characterization framework.  As mentioned earlier, in order to avoid sensitivity of the detection scheme to grid resolution, great circle distance has been employed throughout.  In terms of regular latitude-longitude coordinates, great circle distance between points $(\lambda_1, \varphi_1)$ and $(\lambda_2, \varphi_2)$ is defined via the symmetric operation
+This section describes the building blocks that have been utilized in constructing our detection and characterization framework.  As mentioned earlier, in order to avoid sensitivity of the detection scheme to grid resolution, great-circle-distance has been employed throughout.  In terms of regular latitude-longitude coordinates, great-circle-distance between points $(\lambda_1, \varphi_1)$ and $(\lambda_2, \varphi_2)$ is defined via the symmetric operation
 \begin{equation}
 r(\lambda_1, \varphi_1; \lambda_2, \varphi_2) = a \arccos \left( \sin \varphi_1 \sin \varphi_2 + \cos \varphi_1 \cos \varphi_2 \cos (\lambda_1 - \lambda_2) \right).
 \end{equation}  Algorithmically, this calculation is implemented as \texttt{gcdist(p,q)} for given graph nodes \texttt{p} and \texttt{q}.
 
-{\color{red}Add \_ANOMAVG and \_MEAN operator}
-
 \subsection{Efficient neighbor search using $k$-d Trees}
 
-Three-dimensional ($k=3$) $k$-d trees \citep{bentley1975multidimensional} are used throughout our detection code using the implementation of \cite{tsiombikas2015kdtree}.  Although $k$-d trees use straight-line instance instead of great circle distance, we utilize the observation that straight-line and great-circle distance maintain the same ordering for points confined to the surface of the sphere.  In particular, we utilize three key functions made available by the $k$-d tree implementation:
+Three-dimensional ($k=3$) $k$-d trees \citep{bentley1975multidimensional} are used throughout our detection code using the implementation of \cite{tsiombikas2015kdtree}.  Although $k$-d trees use 3D straight-line instance instead of great-circle-distance, we utilize the observation that straight-line and great-circle distance maintain the same ordering for points confined to the surface of the sphere.  In particular, we utilize three key functions made available by the $k$-d tree implementation:
 \begin{itemize}
 \item[] \texttt{K = build\_kd\_tree(P)} constructs a $k$-d tree \texttt{K} from a point set \texttt{P}.
 \item[] \texttt{q = kd\_tree\_nearest\_neighbor(K, p)} locates the nearest neighbor \texttt{q} to point \texttt{p} using the $k$-d tree \texttt{K}.
 \item[] \texttt{S = kd\_tree\_all\_neighbors(K, p, dist)} locates all points that are within a distance \texttt{dist} of a point \texttt{p} within the $k$-d tree \texttt{K}.
 \end{itemize}
 
-\noindent A key advantage of KD trees is their relatively efficient $O(n \log n)$ construction time and $O(\log n)$ average time nearest neighbor search.
+\noindent A key advantage of $k$-d trees is their relatively efficient $O(n \log n)$ construction time and $O(\log n)$ average time nearest neighbor search.
 
 \subsection{Unstructured grid specification}
 
-For purposes of determining connectivity of the unstructured grid, we require the specification of a graph such as the one depicted in Figure \ref{fig:unstructured_grid}.  The connectivity information is stored textually as an adjacency list via a variable-length comma-separated variable file.  The total number of nodes ($N$) is specified at the top of the file, followed by $N$ lines containing the longitude (lon), latitude (lat), number of adjacent nodes, and finally a 1-indexed list of all adjacent nodes, such as depicted below:
+For purposes of determining connectivity of the unstructured grid, we require the specification of a graph such as the one depicted in Figure \ref{fig:unstructured_grid}.  The connectivity information is stored textually as an adjacency list via a variable-length comma-separated variable file.  The total number of nodes ($N$) is specified at the top of the file, followed by $N$ lines containing the longitude (lon), latitude (lat), associated area, number of adjacent nodes, and finally a 1-indexed list of all adjacent nodes, such as depicted below:
 \ \\
 
 \noindent \begin{tabular}{|p{\textwidth}|}
 \hline \small \begin{verbatim}
 <total number of nodes>
-<lon>,<lat>,<# adj. nodes>,<first adj. node>,...,<last adj. node>
+<lon>,<lat>,<area>,<# adj. nodes>,<first adj. node>,..,<last adj. node>
 ...
 \end{verbatim} \\
 \hline
 \end{tabular}
 
+\subsection{Computing a spatial averaged mean}
+
+Many existing tracking algorithms use either a spatially-averaged mean field or an anomaly field computed against the spatially-averaged mean \citep{haarsma1993tropical,bengtsson1995hurricane}.  The mean operation (implemented in TempestExtremes as \texttt{\_MEAN()} in the variable specification) is computed on unstructured grids via graph search (see Algorithm \ref{alg:field_mean_value}).  Anomaly from the mean can then be computed in conjunction with the \texttt{\_DIFF} operator (see appendix \ref{sec:VariableSpecification}).
+
 \subsection{Extrema detection}
 
-For purposes of computational efficiency, candidate points are initially located by identifying local extrema in a given field (for instance SLP) via \texttt{find\_all\_minima} (Algorithm \ref{alg:find_all_minima}).  Candidates are then eliminated if they are ``too close'' to stronger extrema (Algorithm \ref{alg:merge_candidates_minima}).  The command line specification for the search procedure in TempestExtremes can be found in Appendix \ref{sec:DetectCyclonesUnstructuredAppendix}.
-
-%The initial search field is specified to TempestExtremes either via the \texttt{--searchbymin} or \texttt{--searchbymax} command line argument.  The merge distance used in \texttt{merge\_candidates\_minima} is specified via the \texttt{--mergedist} command line argument.
+For purposes of computational efficiency, candidate points are initially located by identifying local extrema in a given field (for instance SLP) via \texttt{find\_all\_minima} (Algorithm \ref{alg:find_all_minima}).  Candidates are then eliminated if they are ``too close'' to stronger extrema (Algorithm \ref{alg:merge_candidates_minima}) (e.g. \cite{pinto2005sensitivities}).  The initial search field is specified to TempestExtremes either via the \texttt{--searchbymin} or \texttt{--searchbymax} command line argument.  The merge distance used in \texttt{merge\_candidates\_minima} is specified via the \texttt{--mergedist} command line argument.
 
 \subsection{Closed contour criteria} \label{sec:ClosedContour}
 
-Although a first pass at candidate points may be made by looking for local extrema (comparing against all neighboring nodes), this criteria is not robust across model resolution.  That is, the distance between a node and its neighbors decreases proportional to the local grid spacing, and so does not definite ``physical'' criterion.  Consequently, we instead advocate for a \textit{closed contour criteria} to define candidate nodes.  Closed contours were first employed by \cite{bell198915}, who used a 30m 500 mb geopotential height contour to identify closed circulation centers.  Their approach used radial arms generated at 15$^\circ$ intervals over a great circle distance of 2$^\circ$ and required that geopotential heights rise by at least 30m along each arm.  Unfortunately, the use of radial arms to define the closed contour is again sensitive to model resolution, since it has the potential to only sample as many neighbors as radial arms employed.
+Although a first pass at candidate points may be made by looking for local extrema (comparing against all neighboring nodes), this criteria is not robust across model resolution.  That is, the distance between a node and its neighbors decreases proportional to the local grid spacing, and so does not definite ``physical'' criterion.  Consequently, we instead advocate for a \textit{closed contour criteria} to define candidate nodes.  Closed contours were first employed by \cite{bell198915}, who used a 30m 500 mb geopotential height contour to identify closed circulation centers.  Their approach used radial arms generated at 15$^\circ$ intervals over a great-circle-distance of 2$^\circ$ and required that geopotential heights rise by at least 30m along each arm.  Unfortunately, the use of radial arms to define the closed contour is again sensitive to model resolution, since it has the potential to only sample as many neighbors as radial arms employed.
 
-Here we propose an alternative closed contour criteria that is largely insensitive to model resolution that uses graph search to ensure that all paths along the unstructured grid from an initial location \texttt{p0} lead to a sufficiently large decrease (or increase) in a given field \texttt{G}.  This criteria is illustrated in Figure \ref{fig:ClosedContour}, and is implemented in Algorithm \ref{alg:find_max_near} and \ref{alg:closed_contour_max} (for closed contours around local maxima).  An analogous algorithm \texttt{no\_closed\_contour} is also provided, which has similar functionality but discards candidates that satisfy the closed contour criteria (this may be desirable, for instance, to identify cyclonic structures that do not have a warm core).
+Here we propose an alternative closed contour criteria that is largely insensitive to model resolution that uses graph search to ensure that all paths along the unstructured grid from an initial location \texttt{p0} lead to a sufficiently large decrease (or increase) in a given field \texttt{G}.  This criteria is illustrated in Figure \ref{fig:ClosedContour}, and is implemented in Algorithm \ref{alg:find_max_near} and \ref{alg:closed_contour_max} (for closed contours around local maxima).  The closed contour criteria is implemented in TempestExtremes via the command line argument \texttt{--closedcontourcmd}.  An analogous command line argument \texttt{--noclosedcontourcmd} is also provided, which has similar functionality but discards candidates that satisfy the closed contour criteria (this may be desirable, for instance, to identify cyclonic structures that do not have a warm core).
 
 \subsection{Thresholding}
 
@@ -202,11 +204,11 @@ For simplicity, $k$-d trees are constructed at each time level in order to maxim
 
 \section{Selected examples} \label{sec:SelectedExamples}
 
-Several selected examples of the feature detection tool are now provided.  The first three examples use data from the NCEP Climate Forecast System Reanalysis (CFSR), available at 0.5 degree global resolution with 6-hourly output from 1979-present \citep{saha2010ncep}.
+Several selected examples of the feature detection tool are now provided.  The first three examples use data from the NCEP Climate Forecast System Reanalysis (CFSR), available at 0.5 degree global resolution with 6-hourly output from 1979-present \citep{saha2010ncep}.  The remaining example uses a custom variable-resolution simulation with CESM \citep{zarzycki2014multidecadal} on both the native grid data and the regridded latitude-longitude grid data.
 
 \subsection{Tropical cyclones in CFSR} \label{sec:TropicalCycloneExample}
 
-Our first example is to employ the tracker for tropical cyclones.  The command line we use to detect tropical cyclone-like features in CFSR is provided below.  Three-dimensional (time + 2D space) hyperslabs of CFSR data have been extracted, with \texttt{TMP\_L100} corresponding to 400hPa air temperature, and \texttt{U\_GRD\_L100} and \texttt{V\_GRD\_L100} corresponding to 850hPa zonal and meridional velocities.  Candidates are initially identified by minima in the sea level pressure (\texttt{PRMSL\_L101}), and then eliminated if a smaller minimum exists within a great circle distance of 2.0 degrees.  The closed contour criteria is then applied, requiring an increase in SLP of at least 200Pa over a distance of 4 degrees away from the candidate node, and a decrease in 400hPa air temperature of 0.4K within 8 degrees of the node within 1.1 degrees of the candidate with maximum air temperature.  Since CFSR is on a structured latitude-longitude grid, the output format is \texttt{i,j,lon,lat,psl,maxu,zs}, where \texttt{i,j} are the longitude and latitude coordinates within the dataset, \texttt{lon,lat} are the actual longitude and latitude of the candidate, \texttt{psl} is the SLP at the candidate point (equal to the maximum SLP within 0 degrees of the candidate), \texttt{maxu} is the vector magnitude of the maximum 850 hPa wind within 4 degrees of the candidate, and \texttt{zs} is the topographic height at the candidate point.
+Our first example employs TempestExtremes for tropical cyclones.  The command line we use to detect tropical cyclone-like features in CFSR is provided below.  Three-dimensional (time + 2D space) hyperslabs of CFSR data have been extracted, with \texttt{TMP\_L100} corresponding to 400hPa air temperature, and \texttt{U\_GRD\_L100} and \texttt{V\_GRD\_L100} corresponding to 850hPa zonal and meridional velocities.  Candidates are initially identified by minima in the sea level pressure (\texttt{PRMSL\_L101}), and then eliminated if a smaller minimum exists within a great-circle-distance of 2.0 degrees.  The closed contour criteria is then applied, requiring an increase in SLP of at least 200Pa over a distance of 4 degrees away from the candidate node, and a decrease in 400hPa air temperature of 0.4K within 8 degrees of the node within 1.1 degrees of the candidate with maximum air temperature.  Since CFSR is on a structured latitude-longitude grid, the output format is \texttt{i,j,lon,lat,psl,maxu,zs}, where \texttt{i,j} are the longitude and latitude coordinates within the dataset, \texttt{lon,lat} are the actual longitude and latitude of the candidate, \texttt{psl} is the SLP at the candidate point (equal to the maximum SLP within 0 degrees of the candidate), \texttt{maxu} is the vector magnitude of the maximum 850 hPa wind within 4 degrees of the candidate, and \texttt{zs} is the topographic height at the candidate point.
 
 {\small \begin{verbatim}
   ./DetectCyclonesUnstructured
@@ -219,7 +221,7 @@ Our first example is to employ the tracker for tropical cyclones.  The command l
        HGT_L1,max,0"
 \end{verbatim}}
 
-All outputs from DetectCyclonesUnstructured are then concatenated into a single file containing candidates at all times (\texttt{pgbhnl.dcu\_tc\_all.dat}).  Candidates are then stitched in time to form paths, with a maximum distance between candidates of 8.0 degrees (great circle distance), consisting of at least 8 candidates per path, and with a maximum gap size of 2 (most consecutive timesteps with no associated candidate).  Because localized low-pressure regions that are unrelated to tropical cyclones can form as a consequence of topographic forcing, we also require that for at least 8 time steps the underlying topographic height (\texttt{zs}) be at most 100 meters.  The associated command line for StitchNodes is:
+All outputs from DetectCyclonesUnstructured are then concatenated into a single file containing candidates at all times (\texttt{pgbhnl.dcu\_tc\_all.dat}).  Candidates are then stitched in time to form paths, with a maximum distance between candidates of 8.0 degrees (great-circle-distance), consisting of at least 8 candidates per path, and with a maximum gap size of 2 (most consecutive timesteps with no associated candidate).  Because localized low-pressure regions that are unrelated to tropical cyclones can form as a consequence of topographic forcing, we also require that for at least 8 time steps the underlying topographic height (\texttt{zs}) be at most 100 meters.  The associated command line for StitchNodes is:
 
 {\small \begin{verbatim}
   ./StitchNodes
@@ -296,7 +298,7 @@ For this example, we use the high-order regridding package TempestRemap \citep{u
 
 \conclusions \label{sec:Conclusions}
 
-Conclusions.
+Automated pointwise feature trackers have been frequently and successfully employed over the past several decades to extract useful information from large climate datasets.  With spatial and temporal resolution increasing rapidly in response to increasingly powerful computational resources, climate datasets have grown increasingly unwieldy and so there has been a growing need for such large dataset processing tools.  This paper has outlined a framework for pointwise feature tracking (TempestExtremes) that exposes a suite of generalized kernels drawn from the literature on trackers of the past several decades.  This framework is sufficiently robust to be applicable to many climate and weather datasets, including data on unstructured grids.  We expect such a framework would be useful for isolating uncertainties that emerge from particular parameter choices in tracking schemes, or to compute optimal threshold values for detecting pointwise features in, e.g. reanalysis data.  Future development plans in TempestExtremes include the construction of analogous kernels for tracking areal features (blobs), such as clouds or atmospheric rivers.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% ACKNOWLEDGEMENTS
@@ -304,7 +306,7 @@ Conclusions.
 
 \pagebreak
 \begin{acknowledgements}
-
+This work has been supported by NASA award NNX16AG62G ``TempestExtremes: Indicators of change in the characteristics of extreme weather.''  The authors would like to thank Dr. Kevin Reed for his efforts ensuring the quality of the software package.
 \end{acknowledgements}
 \pagebreak
 
@@ -315,23 +317,42 @@ Conclusions.
 \appendix
 \subsection{A Review of Extratropical Cyclone Tracking Algorithms} \label{sec:ExtratropicalCycloneAlgorithms}
 
-Manual counts of cyclones were performed by \cite{petterssen1956weather} in the Northern hemisphere from 1899-1939, and latter binned by \cite{klein1957principle} to determine the spatial distribution of such storms.  These techniques were later refined by \cite{whittaker1982atlas} by accounting for cyclone trajectories.  A similar survey in the Southern hemisphere was performed by \cite{taljaard1967development} for July 1957 - December 1958.  Manual tracking and characterization of cyclones was also performed by \cite{akyildiz1985systematic} using ECMWF forecast data for the 1981/82 winter.
+This appendix reviews the existing literature on extratropical cyclone tracking, which has been one of the earliest and most common instances of both manual and automated feature tracking.  Manual counts of cyclones were performed by \cite{petterssen1956weather} in the Northern hemisphere from 1899-1939, and latter binned by \cite{klein1957principle} to determine the spatial distribution of such storms.  These techniques were later refined by \cite{whittaker1982atlas} by accounting for cyclone trajectories.  A similar survey in the Southern hemisphere was performed by \cite{taljaard1967development} for July 1957 - December 1958.  Manual tracking and characterization of cyclones was also performed by \cite{akyildiz1985systematic} using ECMWF forecast data for the 1981/82 winter.
 
-One of the first automated detection and tracking for extratropical cyclones was developed by \cite{williamson1981storm} using nonlinear optimization to fit cyclonic profiles to anomalies in the 500-mb geopotential height field.  Storms were then tracked over a short forecast period using the best fit to the cyclone's centerpoint.
+One of the first automated detection and tracking for extratropical cyclones was developed by \cite{williamson1981storm} using nonlinear optimization to fit cyclonic profiles to anomalies in the 500-mb geopotential height field.  Storms were then tracked over a short forecast period using the best fit to the cyclone's centerpoint.  Counts of cyclones neglecting the cyclone trajectory were automatically generated from climate model output for both hemispheres by \cite{lambert1988cyclone} using local minima in 1000-hPa geopotential height.  This method had some shortcomings, including mischaracterization of local lows due to Gibbs' ringing and topographically-driven lows.  To overcome these problems, \cite{alpert1990climatological} proposed an additional minimum threshold on the local pressure gradient.  Similarly, \cite{le1990comparison} detected cyclones in ECMWF pressure data using a local minima in the sea-level pressure that must also be 4 mb below the average sea-level pressure of neighboring grid points, and must persist for three successive 6- or 12- hour intervals.  \cite{murray1991numerical} extracted low pressure centers from interpolated GCM data using local optimization, based on earlier work in \cite{rice1982durivation}.  These original papers primarily sought minimum in the SLP field or looked for maxima in the Laplacian of the SLP field.
 
-Counts of cyclones neglecting the cyclone trajectory were automatically generated from climate model output for both hemispheres by \cite{lambert1988cyclone} using local minima in 1000-hPa geopotential height.  This method had some shortcomings, including mischaracterization of local lows due to Gibbs' ringing and topographically-driven lows.  To overcome these problems, \cite{alpert1990climatological} proposed an additional minimum threshold on the local pressure gradient.  Similarly, \cite{le1990comparison} detected cyclones in ECMWF pressure data using a local minima in the sea-level pressure that must also be 4 mb below the average sea-level pressure of neighboring grid points, and must persist for three successive 6- or 12- hour intervals.
+Several modern extratropical cyclone detection algorithms remain in use, having built on this earlier work.  Short descriptions of many of these schemes are given here.
 
-\cite{murray1991numerical} extracted low pressure centers from interpolated GCM data using local optimization, based on earlier work in \cite{rice1982durivation}.
+{\color{red}Define local = among points immediately neighboring each candidate}
+
+\begin{itemize}
+\item \cite{serreze1993characteristics, serreze1995climatological}:  Assessed $\sim$ 381-400 km arctic dataset for extratopical cyclone behavior.  Search on SLP for local minima at least 2 mb higher than neighbors.  Tracking is performed with a maximum search distance of 1400km per 12 hour period.
+
+\item \cite{sinclair1994objective, sinclair1997objective}:  Assessed 2.5$^\circ$ ECMWF data over the southern hemisphere.  Search on local minima in the 1000 hPa geostrophic vorticity field (computed from the Laplacian of the 1000 hPa geopotential), adjusted for topography and presence of heat lows (see paper for details), satisfying $\zeta_g < -2 \times 10^{-5} \mbox{s}^{-1}$.
+
+\item \cite{blender1997identification}:  Assessed T106 ECMWF analyses ($\sim$ 125 km).  Search on local minima in the 1000 hPa geopotential height field.  Require a positive mean gradient in the 1000 hPa geopotential height field in a $1000 \times 1000$ km$^2$ area around each candidate.  Tracking is performed using nearest-neighbor search with a maximum displacement velocity of 80 km/h, eliminating cyclones with tracks shorter than 3 days.
+
+\item \cite{lionello2002cyclones}:  Assessed a T106 ($\sim$ 125 km) ECHAM-4 dataset.  Search on local minima in the SLP field.  Tracking requires using previous cyclone velocity to delineate a prediction region, and tracks are discarded if they do not continue into the prediction region.
+
+\item \cite{zolina2002improving}:  Assessed T106 ($\sim$ 125 km) and T42 ($\sim$ 300 km) datasets.  Search on local minima in the SLP field.
+
+\item \cite{pinto2005sensitivities}:  Assessed T42 ($\sim$ 300 km) regridded NCEP reanalysis, regridded onto a 0.75$^\circ$ grid by cubic spline interpolation.  Search on local minima in pressure field with maxima of quasi-geostrophic relative vorticity, computed from the Laplacian of pressure, within 1200km.  Cyclones over topography above 1500m are removed.  Require quasi-geostrophic relative vorticity $> 0.1 hPa / (^\circ \mbox{lat})$ and retain only the strongest detections within 3 degrees.  Cyclone tracking requires a prediction velocity and search following \cite{murray1991numerical}.
+
+\item \cite{benestad2006use}:  Assessed 2.5$^\circ$ ERA40 data.  Search uses multiple least-squares regression to estimate the values of the coefficients of a Fourier approximation followed by 1D search in north-south and east-west directions (in effect smoothing the SLP field).
+
+\item \cite{simmonds2008arctic}:  Assessed several 2.5$^\circ$ datasets over the arctic.  Search on local minima in the Laplacian of pressure, rejecting cyclones over topography above 1000m and requiring the presence of a nearby pressure minima.  Identified lows must satisfy a Laplacian with value $> 0.2 hPa / (^\circ \mbox{lat})^2$ over a radius of 2$^\circ$.  Tracking uses a probability estimate using a predicted position.
+
+%\item \cite{hewson1997objective}:
+
+\end{itemize}
 
 Feature tracking on the sphere was revisited by \cite{hodges1995feature}, which extended tracking algorithms designed for Cartesian geometry \cite{hodges1994general} that were built from image processing techniques.
 
 \subsection{A Review of Tropical Cyclone Tracking Algorithms} \label{sec:TropicalCycloneAlgorithms}
 
-Extratropical cyclone tracking techniques have been modified in order to support tropical cyclone tracking.  To eliminate ``false positives'' associated with extratropical cyclones and weak cyclonic depressions, many schemes require that the candidate be associated with a nearby warm core and be associated with a minimum threshold on surface winds for at least 1-3 days.  The definition of a ``warm core'' varies between modeling centers, including such options as air temperature anomaly on pressure surfaces \citep{vitart1997simulation,zhao2009simulations,murakami2012future}, geopotential thickness \citep{tsutsui1996simulated} and decay of vorticity with height \citep{Bengtsson2007,strachan2013investigating}.  Additional filtering of candidate storms over topography or within a specified latitudinal range may be required.  To better match observations, additional geographical, model or feature-dependent criteria may be applied \citep{camargo2002improving,walsh2007objectively,Murakami2010,Murakami2012}. It is widely acknowledged that weaker tropical storms are difficult to track, and the observational record of these less-intense, short-lived storms is questionable \citep{Landsea2010}.
+More recently, and as higher resolution climate data has become available, extratropical cyclone tracking techniques have been modified in order to support tropical cyclone tracking.  To eliminate ``false positives'' associated with extratropical cyclones and weak cyclonic depressions, many schemes require that the candidate be associated with a nearby warm core and be associated with a minimum threshold on surface winds for at least 1-3 days.  The definition of a ``warm core'' varies between modeling centers, including such options as air temperature anomaly on pressure surfaces \citep{vitart1997simulation,zhao2009simulations,murakami2012future}, geopotential thickness \citep{tsutsui1996simulated} and decay of vorticity with height \citep{Bengtsson2007,strachan2013investigating}.  Additional filtering of candidate storms over topography or within a specified latitudinal range may be required.  To better match observations, additional geographical, model or feature-dependent criteria may be applied \citep{camargo2002improving,walsh2007objectively,Murakami2010,Murakami2012}. It is widely acknowledged that weaker tropical storms are difficult to track, and the observational record of these less-intense, short-lived storms is questionable \citep{Landsea2010}.
 
 A tabulated overview of the thresholds utilized by many of these schemes can be found in \cite{walsh2007objectively}, along with several proposed guidelines on detection schemes.  We extend this tabulation with the following short descriptions of many published schemes.
-
-{\color{red}Define local = among points immediately neighboring each candidate}
 
 \begin{itemize}
 \item \cite{broccoli1990existing}: Assessed a R15 ($\sim$ 600 km) and R30 ($\sim$ 300 km) dataset.  Search on PSL with 1.5 mb local min (R15) or 0.75 mb local min (R30), with local surface wind velocity $>$ 17 m/s, latitude $<$ 30$^\circ$.  Cyclones are tracked over a range of 1200 km / day.
@@ -378,6 +399,8 @@ A tabulated overview of the thresholds utilized by many of these schemes can be 
 
 \subsection{A Review of Tropical Easterly Wave Tracking Algorithms} \label{sec:TropicalEasterlyWaveAlgorithms}
 
+{\color{red}TODO}
+
 A similar manual study to \cite{akyildiz1985systematic} was performed by \cite{reed1988evaluation} to detect and track African easterly waves.
 
 Storm tracks and African easterly waves were tracked by \cite{hodges2003comparison}.
@@ -397,8 +420,10 @@ Parameters:
   --out <string> [""] 
   --searchbymin <string> [""] (default PSL)
   --searchbymax <string> [""] 
-  --maxlat <double> [0.000000] (degrees)
+  --minlon <double> [0.000000] (degrees)
+  --maxlon <double> [0.000000] (degrees)
   --minlat <double> [0.000000] (degrees)
+  --maxlat <double> [0.000000] (degrees)
   --topofile <string> [""] 
   --maxtopoht <double> [0.000000] (m)
   --mergedist <double> [0.000000] (degrees)
@@ -418,8 +443,10 @@ Parameters:
 \item[] \texttt{--out <string>} \\ The output file containing the filtered list of candidates in plain text format.
 \item[] \texttt{--searchbymin <string>} \\ The input variable to use for initially selecting candidate points (defined as local minima).  By default this is ``PSL'', representing detection of surface pressure minima.  Only one of \texttt{searchbymin} and \texttt{searchbymax} may be set.
 \item[] \texttt{--searchbymax <string>} \\ The input variable to use for initially selecting candidate points (defined as local maxima).  Only one of \texttt{searchbymin} and \texttt{searchbymax} may be set.
-\item[] \texttt{--maxlat <double>} \\ The maximum absolute latitude for candidate points.  Candidates at higher latitudes are discarded.
-\item[] \texttt{--minlat <double>} \\ The minimum absolute latitude for candidate points.  Candidates at lower latitudes are discarded.
+\item[] \texttt{--minlon <double>} \\ The minimum longitude for candidate points.
+\item[] \texttt{--maxlon <double>} \\ The maximum longitude for candidate points.
+\item[] \texttt{--minlat <double>} \\ The minimum latitude for candidate points.
+\item[] \texttt{--maxlat <double>} \\ The maximum latitude for candidate points.
 \item[] \texttt{--mergedist <double>} \\ Merge candidate points with distance (in degrees) shorter than the specified value.  Among two candidates within the merge distance, only the candidate with lowest \texttt{searchbymin} or highest \texttt{searchbymax} value will be retained. 
 \item[] \texttt{--closedcontourcmd <cmd1>;<cmd2>;...} Eliminate candidates if they do not have a closed contour.  Closed contour commands are separated by a semi-colon.  Each closed contour command takes the form \texttt{var,dist,delta,pivotdist}.  These arguments are as follows.
 \begin{itemize}
@@ -434,13 +461,13 @@ Parameters:
 \item[] \texttt{var <variable>}  The variable used for the contour search.
 \item[] \texttt{op <string>}  Operator that must be satisfied for threshold (options include \texttt{>}, \texttt{>=}, \texttt{<}, \texttt{<=}, \texttt{=}, \texttt{!=}).
 \item[] \texttt{value <double>}  The value on the RHS of the comparison.
-\item[] \texttt{dist <double>}  The great circle distance away from the candidate to search for a point that satisfies the threshold (in degrees).
+\item[] \texttt{dist <double>}  The great-circle-distance away from the candidate to search for a point that satisfies the threshold (in degrees).
 \end{itemize}
 \item[] \texttt{--outputcmd <cmd1>;<cmd2>;...}  Include additional columns in the output file.  Output commands take the form \texttt{var,op,dist}. These arguments are as follows.
 \begin{itemize}
 \item[] \texttt{var <variable>}  The variable used for the contour search.
 \item[] \texttt{op <string>}  Operator that is applied over all points within the specified distance of the candidate (options include \texttt{max}, \texttt{min}, \texttt{avg}, \texttt{maxdist}, \texttt{mindist}).
-\item[] \texttt{dist <double>}  The great circle distance away from the candidate wherein the operator is applied (in degrees).
+\item[] \texttt{dist <double>}  The great-circle-distance away from the candidate wherein the operator is applied (in degrees).
 \end{itemize}
 \item[] \texttt{--timestride <integer>} \\ Only examine discrete times at the given stride (by default 1).
 \item[] \texttt{--regional} \\ When a latitude-longitude grid is employed, do not assume longitudinal boundaries to be periodic.
@@ -448,7 +475,7 @@ Parameters:
 \item[] \texttt{--verbosity <integer>} \\ Set the verbosity level (default 0).
 \end{itemize}
 
-\subsubsection{Variable Specification}
+\subsubsection{Variable Specification} \label{sec:VariableSpecification}
 
 Quantities of type \texttt{<variable>} include both NetCDF variables in the input file (for example, ``Z850'') and simple operations performed on those variables.  By default it is assumed that NetCDF variables are specified in the \texttt{.nc} file as
 \begin{center}
@@ -461,14 +488,17 @@ Quantities of type \texttt{<variable>} include both NetCDF variables in the inpu
 \texttt{float Z(time, lev, lat, lon)} \quad or \quad \texttt{float Z(time, lev, ncol)}
 \end{center} they may be specified on the command-line as $\texttt{Z(<lev>)}$, where the integer index \texttt{<lev>} corresponds to the first dimension (or the dimension after \texttt{time}, if present).  
 
-Simple operations on variables are also supported, including
+Simple operators are also supported, including
 \begin{itemize}
+\item[] \texttt{\_MEAN(<variable>, <distance>)} Spatial mean over a given radius,
 \item[] \texttt{\_VECMAG(<variable>, <variable>)} 2-component vector magnitude,
 \item[] \texttt{\_PLUS(<variable>, <variable>)} Pointwise sum of variables,
-\item[] \texttt{\_DIFF(<variable>, <variable>)} Pointwise difference of variables.
-\end{itemize}  The following are valid examples of \texttt{<variable>} type,
+\item[] \texttt{\_AVG(<variable>, <variable>)} Pointwise average of variables,
+\item[] \texttt{\_DIFF(<variable>, <variable>)} Pointwise difference of variables,
+\item[] \texttt{\_F()}  Coriolis parameter.
+\end{itemize}  For instance, the following are valid examples of \texttt{<variable>} type,
 \begin{center}
-\texttt{\_VECMAG(U850, V850)} \quad and \quad \texttt{\_DIFF(U(3),U(5))}.
+\texttt{\_MEAN(PSL,2.0)}, \quad \texttt{\_VECMAG(U850, V850)} \quad and \quad \texttt{\_DIFF(U(3),U(5))}.
 \end{center}
 
 \subsection{Software Documentation: StitchNodes} \label{sec:StitchNodesAppendix}
@@ -511,6 +541,30 @@ Parameters:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% ALGORITHMS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{algorithm}
+\caption{Compute the spatial mean value of a field \texttt{G} over a region of radius \texttt{dist} using graph search on an unstructured grid.\ \\} \label{alg:field_mean_value}
+\noindent \begin{tabular}{p{5in}}
+\hline \small \begin{verbatim}
+field F = mean(field G, dist)
+  for each node p
+    total_area = 0
+    F[p] = 0
+    visited = []
+    tovisit = [p]
+    while visited is not empty
+      q = remove node from tovisit
+      add q to visited
+      F[p] = F[p] + G[q] * area[q]
+      total_area = total_area + area[q]
+      for each neighbor s of q
+        if (gcd(p,s) < dist) and (s is not in visited) then
+          add s to tovisit
+    F[p] = F[p] / total_area
+\end{verbatim} \\
+\hline
+\end{tabular}
+\end{algorithm}
 
 \begin{algorithm}
 \caption{Locate the set of all nodes \texttt{P} that are local minima for a field \texttt{G} (for instance, SLP) defined on an unstructured grid.  The procedure for locating maxima is analogous.\ \\} \label{alg:find_all_minima}
