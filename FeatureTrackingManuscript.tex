@@ -294,7 +294,7 @@ Counts of tropical easterly waves within each CFSR grid volume are given in Figu
 
 For our final example, we assess the differences in tropical cyclone character obtained from native and regridded datasets.  {\color{red}Using the variable-resolution option in the Community Earth System Model (VR-CESM) to refine the northern hemisphere to 0.25$^\circ$ resolution, a simulation of a complete hurricane season (September - January) has been performed}.  With the high-order spectral element dynamical core used to solve the fluid equations in the atmosphere, VR-CESM has been demonstrated to be effective in simulating tropical cyclone-like features \citep{zarzycki2014multidecadal, zarzycki2014using}.  However, even at the relatively fine global resolution of 0.25$^\circ$, the eye of the tropical cyclone is only partially resolved.  Since VR-CESM uses an unstructured mesh with degrees of freedom stored at spectral element Gauss-Lobatto (GL) nodes, data is typically analyzed only after being regridded to a regular latitude-longitude mesh of approximately equal resolution.  The regridding procedure has the potential to smear out grid-scale features.
 
-For this example, we use the high-order regridding package TempestRemap \citep{ullrich2015arbitrary, ullrich2016arbitrary} for remapping the native spectral element output to a regular latitude-longitude grid with 0.25$^\circ$ grid spacing.  For purposes of determining connectivity on the variable-resolution spectral element mesh, we connect GL nodes along the coordinate axis of each quadrilateral element.  DetectCyclonesUnstructured is then applied to both the native grid data and the regridded data on the regular latitude-longitude mesh (using the configuration specified in section \ref{sec:TropicalCycloneExample}) and tropical cyclones categorized by maximum wind speed {\color{red}(Colin: more here)}.  The results of this analysis are depicted in Figure \ref{fig:TropicalCycloneCESM}.  As expected, the native grid output produces  almost identical tracks, but more powerful tropical cyclones overall (with many tropical cyclones dropping down by a full category as a consequence of the remapping procedure).
+For this example, we use the high-order regridding package TempestRemap \citep{ullrich2015arbitrary, ullrich2016arbitrary} for remapping the native spectral element output to a regular latitude-longitude grid with 0.25$^\circ$ grid spacing.  For purposes of determining connectivity on the variable-resolution spectral element mesh, we connect GL nodes along the coordinate axis of each quadrilateral element (see Figure \ref{fig:FiniteElementConnectivity}).  DetectCyclonesUnstructured is then applied to both the native grid data and the regridded data on the regular latitude-longitude mesh (using the configuration specified in section \ref{sec:TropicalCycloneExample}) and tropical cyclones categorized by maximum wind speed {\color{red}(Colin: more here)}.  The results of this analysis are depicted in Figure \ref{fig:TropicalCycloneCESM}.  As expected, the native grid output produces  almost identical tracks, but more powerful tropical cyclones overall (with many tropical cyclones dropping down by a full category as a consequence of the remapping procedure).
 
 \conclusions \label{sec:Conclusions}
 
@@ -321,9 +321,7 @@ This appendix reviews the existing literature on extratropical cyclone tracking,
 
 One of the first automated detection and tracking for extratropical cyclones was developed by \cite{williamson1981storm} using nonlinear optimization to fit cyclonic profiles to anomalies in the 500-mb geopotential height field.  Storms were then tracked over a short forecast period using the best fit to the cyclone's centerpoint.  Counts of cyclones neglecting the cyclone trajectory were automatically generated from climate model output for both hemispheres by \cite{lambert1988cyclone} using local minima in 1000-hPa geopotential height.  This method had some shortcomings, including mischaracterization of local lows due to Gibbs' ringing and topographically-driven lows.  To overcome these problems, \cite{alpert1990climatological} proposed an additional minimum threshold on the local pressure gradient.  Similarly, \cite{le1990comparison} detected cyclones in ECMWF pressure data using a local minima in the sea-level pressure that must also be 4 mb below the average sea-level pressure of neighboring grid points, and must persist for three successive 6- or 12- hour intervals.  \cite{murray1991numerical} extracted low pressure centers from interpolated GCM data using local optimization, based on earlier work in \cite{rice1982durivation}.  These original papers primarily sought minimum in the SLP field or looked for maxima in the Laplacian of the SLP field.
 
-Several modern extratropical cyclone detection algorithms remain in use, having built on this earlier work.  Short descriptions of many of these schemes are given here.
-
-{\color{red}Define local = among points immediately neighboring each candidate}
+Several modern extratropical cyclone detection algorithms remain in use, having built on this earlier work.  Short descriptions of many of these schemes are given here.  Some of these algorithms use the notion of a local neighborhood or periphery, as defined in Figure \ref{fig:LocalNodeTypes}.
 
 \begin{itemize}
 \item \cite{serreze1993characteristics, serreze1995climatological}:  Assessed $\sim$ 381-400 km arctic dataset for extratopical cyclone behavior.  Search on SLP for local minima at least 2 mb higher than neighbors.  Tracking is performed with a maximum search distance of 1400km per 12 hour period.
@@ -725,10 +723,24 @@ path set S = stitch_nodes(set array P[1..T], dist, maxgap)
 
 \begin{figure}[H]
 \begin{center}
+\includegraphics[width=3.5in]{FiniteElementFeatureTracking.pdf}
+\end{center}
+\caption{An illustration of how connectivity is defined in this work for nodes on a spectral element mesh.  Arrows indicate connectivity for nodes A and B.} \label{fig:FiniteElementConnectivity}
+\end{figure}
+
+\begin{figure}[H]
+\begin{center}
 \includegraphics[clip, trim=0.2cm 6.6cm 0.2cm 7.1cm, width=5in]{nhemi-traj_plotted.pdf}
 \includegraphics[clip, trim=0.2cm 6.8cm 0.2cm 7.1cm, width=5in]{nhemi_regrid-traj_plotted.pdf}
 \end{center}
 \caption{Tropical cyclone trajectories and associated intensities as obtained from the simulation of a single hurricane season in CESM \ref{sec:TropicalCycloneCESM} using (top) native spectral-element grid data and (bottom) data regridded to a regular latitude-longitude grid with 0.25$^\circ$ grid spacing.} \label{fig:TropicalCycloneCESM}
+\end{figure}
+
+\begin{figure}[H]
+\begin{center}
+\includegraphics[width=2in]{LocalNodeTypes.pdf}
+\end{center}
+\caption{The local neighborhood of a central node (shaded) typically refers to the surrounding 8 nodes (diagonal hatching).  The periphery (used by \cite{tsutsui1996simulated}), refers to the set of nodes that surround the local neighborhood (unshaded nodes).} \label{fig:LocalNodeTypes}
 \end{figure}
 
 
