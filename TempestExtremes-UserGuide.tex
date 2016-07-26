@@ -45,17 +45,21 @@
 Usage: DetectCyclonesUnstructured <parameter list>
 Parameters:
   --in_data <string> [""] 
+  --in_data_list <string> [""]
   --in_connect <string> [""] 
   --out <string> [""] 
+  --out_file_list <string> [""]
   --searchbymin <string> [""] (default PSL)
   --searchbymax <string> [""] 
-  --maxlat <double> [0.000000] (degrees)
+  --minlon <double> [0.000000] (degrees)
+  --maxlon <double> [0.000000] (degrees)
   --minlat <double> [0.000000] (degrees)
+  --maxlat <double> [0.000000] (degrees)
   --topofile <string> [""] 
   --maxtopoht <double> [0.000000] (m)
   --mergedist <double> [0.000000] (degrees)
-  --closedcontourcmd <string> [""] [var,dist,delta,minmaxdist;...]
-  --noclosedcontourcmd <string> [""] [var,dist,delta,minmaxdist;...]
+  --closedcontourcmd <string> [""] [var,delta,dist,minmaxdist;...]
+  --noclosedcontourcmd <string> [""] [var,delta,dist,minmaxdist;...]
   --thresholdcmd <string> [""] [var,op,value,dist;...]
   --outputcmd <string> [""] [var,op,dist;...]
   --timestride <integer> [1] 
@@ -65,22 +69,24 @@ Parameters:
 \end{verbatim}
 
 \begin{itemize}
-\item[] \texttt{--in\_data <string>} \\ The input datafile in NetCDF format.
+\item[] \texttt{--in\_data <string>} \\ A list of input datafiles in NetCDF format, separated by semi-colons.
+\item[] \texttt{--in\_data\_list <string>} \\ A file containing the \texttt{--in\_data} argument for a sequence of processing operations (one per line).
 \item[] \texttt{--in\_connect <string>} \\ A connectivity file, which uses a vertex list to describe the graph structure of the input grid.  This parameter is not required if the data is on a latitude-longitude grid.
 \item[] \texttt{--out <string>} \\ The output file containing the filtered list of candidates in plain text format.
+\item[] \texttt{--out\_file\_list <string>} \\ A file containing the \texttt{--out} argument for a sequence of processing operations (one per line).
 \item[] \texttt{--searchbymin <string>} \\ The input variable to use for initially selecting candidate points (defined as local minima).  By default this is ``PSL'', representing detection of surface pressure minima.  Only one of \texttt{searchbymin} and \texttt{searchbymax} may be set.
 \item[] \texttt{--searchbymax <string>} \\ The input variable to use for initially selecting candidate points (defined as local maxima).  Only one of \texttt{searchbymin} and \texttt{searchbymax} may be set.
-\item[] \texttt{--maxlat <double>} \\ The maximum absolute latitude for candidate points.  Candidates at higher latitudes are discarded.
-\item[] \texttt{--minlat <double>} \\ The minimum absolute latitude for candidate points.  Candidates at lower latitudes are discarded.
-\item[] \texttt{--topofile <string>} \\ An auxiliary file containing topographic information.
-\item[] \texttt{--maxtopoht <double>} \\ If \texttt{--topofile} is specified, discard candidates over topography higher than specified by this parameter.
+\item[] \texttt{--minlon <double>} \\ The minimum longitude for candidate points.
+\item[] \texttt{--maxlon <double>} \\ The maximum longitude for candidate points.
+\item[] \texttt{--minlat <double>} \\ The minimum latitude for candidate points.
+\item[] \texttt{--maxlat <double>} \\ The maximum latitude for candidate points.
 \item[] \texttt{--mergedist <double>} \\ Merge candidate points with distance (in degrees) shorter than the specified value.  Among two candidates within the merge distance, only the candidate with lowest \texttt{searchbymin} or highest \texttt{searchbymax} value will be retained. 
-\item[] \texttt{--closedcontourcmd <cmd1>;<cmd2>;...} Eliminate candidates if they do not have a closed contour.  Closed contour commands are separated by a semi-colon.  Each closed contour command takes the form \texttt{var,dist,delta,pivotdist}.  These arguments are as follows.
+\item[] \texttt{--closedcontourcmd <cmd1>;<cmd2>;...} Eliminate candidates if they do not have a closed contour.  Closed contour commands are separated by a semi-colon.  Each closed contour command takes the form \texttt{var,delta,dist,minmaxdist}.  These arguments are as follows.
 \begin{itemize}
 \item[] \texttt{var <variable>}  The variable used for the contour search.
 \item[] \texttt{dist <double>}  The great-circle distance (in degrees) from the pivot within which the closed contour criteria must be satisfied.
 \item[] \texttt{delta <double>}  The amount by which the field must change from the pivot value.  If positive (negative) the field must increase (decrease) by this value along the contour.
-\item[] \texttt{pivotdist <double>}  The distance away from the candidate to search for the pivot.  If \texttt{delta} is positive (negative), the pivot is a local minimum (maximum).
+\item[] \texttt{minmaxdist <double>}  The distance away from the candidate to search for the minima/maxima.  If \texttt{delta} is positive (negative), the pivot is a local minimum (maximum).
 \end{itemize}
 \item[] \texttt{--noclosedcontourcmd <cmd1>;<cmd2>;...} \\ As \texttt{closedcontourcmd}, except eliminates candidates if a closed contour is present.
 \item[] \texttt{--thresholdcmd <cmd1>;<cmd2>;...}  Eliminate candidates that do not satisfy a threshold criteria (there must exist a point within a given distance of the candidate that satisfies a given equality or inequality).  Threshold commands are separated by a semi-colon.  Each threshold command takes the form \texttt{var,op,value,dist}.  These arguments are as follows.
@@ -88,21 +94,21 @@ Parameters:
 \item[] \texttt{var <variable>}  The variable used for the contour search.
 \item[] \texttt{op <string>}  Operator that must be satisfied for threshold (options include \texttt{>}, \texttt{>=}, \texttt{<}, \texttt{<=}, \texttt{=}, \texttt{!=}).
 \item[] \texttt{value <double>}  The value on the RHS of the comparison.
-\item[] \texttt{dist <double>}  The great circle distance away from the candidate to search for a point that satisfies the threshold (in degrees).
+\item[] \texttt{dist <double>}  The great-circle-distance away from the candidate to search for a point that satisfies the threshold (in degrees).
 \end{itemize}
 \item[] \texttt{--outputcmd <cmd1>;<cmd2>;...}  Include additional columns in the output file.  Output commands take the form \texttt{var,op,dist}. These arguments are as follows.
 \begin{itemize}
 \item[] \texttt{var <variable>}  The variable used for the contour search.
 \item[] \texttt{op <string>}  Operator that is applied over all points within the specified distance of the candidate (options include \texttt{max}, \texttt{min}, \texttt{avg}, \texttt{maxdist}, \texttt{mindist}).
-\item[] \texttt{dist <double>}  The great circle distance away from the candidate wherein the operator is applied (in degrees).
+\item[] \texttt{dist <double>}  The great-circle-distance away from the candidate wherein the operator is applied (in degrees).
 \end{itemize}
 \item[] \texttt{--timestride <integer>} \\ Only examine discrete times at the given stride (by default 1).
-\item[] \texttt{--regional} \\ When a latitude-longitude grid is employed, do not consider longitudinal boundaries to be periodic.
+\item[] \texttt{--regional} \\ When a latitude-longitude grid is employed, do not assume longitudinal boundaries to be periodic.
 \item[] \texttt{--out\_header} \\ Output a header describing the columns of the data file.
 \item[] \texttt{--verbosity <integer>} \\ Set the verbosity level (default 0).
 \end{itemize}
 
-\subsection{Variable Specification}
+\subsection{Variable Specification} \label{sec:VariableSpecification}
 
 Quantities of type \texttt{<variable>} include both NetCDF variables in the input file (for example, ``Z850'') and simple operations performed on those variables.  By default it is assumed that NetCDF variables are specified in the \texttt{.nc} file as
 \begin{center}
@@ -115,15 +121,23 @@ Quantities of type \texttt{<variable>} include both NetCDF variables in the inpu
 \texttt{float Z(time, lev, lat, lon)} \quad or \quad \texttt{float Z(time, lev, ncol)}
 \end{center} they may be specified on the command-line as $\texttt{Z(<lev>)}$, where the integer index \texttt{<lev>} corresponds to the first dimension (or the dimension after \texttt{time}, if present).  
 
-Simple operations on variables are also supported, including
+Simple operators are also supported, including
 \begin{itemize}
-\item[] \texttt{\_VECMAG(<variable>, <variable>)} 2-component vector magnitude,
+\item[] \texttt{\_ABS(<variable>)} Absolute value of a variable,
+\item[] \texttt{\_AVG(<variable>, <variable>)} Pointwise average of variables,
+\item[] \texttt{\_DIFF(<variable>, <variable>)} Pointwise difference of variables,
+\item[] \texttt{\_F()}  Coriolis parameter,
+\item[] \texttt{\_MEAN(<variable>, <distance>)} Spatial mean over a given radius,
 \item[] \texttt{\_PLUS(<variable>, <variable>)} Pointwise sum of variables,
-\item[] \texttt{\_DIFF(<variable>, <variable>)} Pointwise difference of variables.
-\end{itemize}  The following are valid examples of \texttt{<variable>} type,
+\item[] \texttt{\_VECMAG(<variable>, <variable>)} 2-component vector magnitude.
+\end{itemize}  For instance, the following are valid examples of \texttt{<variable>} type,
 \begin{center}
-\texttt{\_VECMAG(U850, V850)} \quad and \quad \texttt{\_DIFF(U(3),U(5))}.
+\texttt{\_MEAN(PSL,2.0)}, \quad \texttt{\_VECMAG(U850, V850)} \quad and \quad \texttt{\_DIFF(U(3),U(5))}.
 \end{center}
+
+\subsection{MPI Support} \label{sec:VariableSpecification}
+
+The \texttt{DetectCyclonesUnstructured} executable supports parallelization via MPI when the \texttt{--in\_data\_list} argument is specified.  When enabled, the parallelization procedure simply distributes the processing operations evenly among available MPI threads.
 
 \section{StitchNodes}
 
