@@ -266,7 +266,7 @@ Once the complete set of extratropical cyclone paths has been computed, total ex
 
 %CMZ: This section needs to be rewritten? It doesn't agree with new figure. For example, the _ABS function should be added if we are now using ABS(rel vort) to get waves in both hemisphere. I can edit if you provide new commands.
 
-Tropical easterly waves are our third example of a pointwise feature that has been assessed in the tracking literature.  In this example, tracking is performed in the northern hemisphere (southern hemisphere) using maxima (minima) in the 600hPa relative vorticity field.  Since CFSR only provides absolute vorticity, relative vorticity must first be extracted by taking the difference between absolute vorticity and the planetary vorticity (the Coriolis parameter).  This is done on the command line via \texttt{\_DIFF(ABS\_V\_L100,\_F())}, where \texttt{ABS\_V\_L100} is the CFSR absolute vorticity variable and \texttt{\_F()} is a built-in function for computing the Coriolis parameter (equal to $f = 2 \Omega \sin \phi$).  In the northern hemisphere, we follow \cite{thorncroft2001african} and isolate tropical easterly wave features by requiring a drop of relative vorticity equal to $5 \times 10^{-5}\ \mbox{s}^{-1}$, and have discarded detections outside of the latitudinal range $[0, 30N]$.  The command line used is as follows:
+Tropical easterly waves are our third example of a pointwise feature that has been assessed in the tracking literature.  In this example, northern hemisphere easterly waves (associated with positive relative vorticity) are tracked separately from southern hemisphere easterly waves (associated with negative relative vorticity) be instantiating \texttt{DetectCyclonesUnstructured} and \texttt{StitchNodes} twice and combining the resultant track files.  All tracking is performed on the 600hPa relative vorticity field, using relative vorticity maxima for northern hemisphere waves and relative vorticity minima for southern hemisphere waves.  Since CFSR only provides absolute vorticity, relative vorticity must first be extracted by taking the difference between absolute vorticity and the planetary vorticity (the Coriolis parameter).  This is done on the command line via \texttt{\_DIFF(ABS\_V\_L100,\_F())}, where \texttt{ABS\_V\_L100} is the CFSR absolute vorticity variable and \texttt{\_F()} is a built-in function for computing the Coriolis parameter (equal to $f = 2 \Omega \sin \phi$).  In the northern hemisphere, we follow \cite{thorncroft2001african} and isolate tropical easterly wave features by requiring a drop of relative vorticity equal to $5 \times 10^{-5}\ \mbox{s}^{-1}$.  The command line used is as follows:
 
 {\small \begin{verbatim}
   ./DetectCyclonesUnstructured
@@ -278,7 +278,7 @@ Tropical easterly waves are our third example of a pointwise feature that has be
     --minlat -35.0 --maxlat 35.0 
 \end{verbatim}}
 
-Northern hemisphere tropical easterly wave paths are constructed using a maximum distance of 3$^\circ$ great-circle-distance between subsequent detections, a minimum path length equal to 8 sequential detections and no allowed gaps.  We further require that the easterly waves have a distance of at least 10$^\circ$ between start and endpoints and are present in the northern hemisphere ($\phi \geq 0^\circ$) for at least 8 timesteps.  The command line is as follows.
+Tropical easterly wave paths are constructed using a maximum distance of 3$^\circ$ great-circle-distance between subsequent detections, a minimum path length equal to 8 sequential detections, no allowed gaps, and a distance of at least 10$^\circ$ between track start and endpoint.  Northern (southern) hemisphere waves must also be present in the northern (southern) hemisphere for at least 8 timesteps (2 days).  The command line for northern hemisphere waves is as follows:
 
 {\small \begin{verbatim}
   ./StitchNodes
@@ -408,7 +408,7 @@ A tabulated overview of the thresholds utilized by many of these schemes can be 
 
 % CMZ: I can't claim to have read all of these, but, for example, Skinner+Diffenbaugh 2014 is an Eulerian technique. Are we defining pointwise as Lagrangian techniques?
 
-Tropical easterly waves are featured more sparsely within the literature, but are nonetheless an important pointwise feature in climate datasets.  Pointwise tracking is complementary to statistical techniques which typically examine the variability, for instance, in the African Easterly Jet (AEJ) (\textit{i.e.}, \cite{ceron1999validation}).  The first manual study that identified and tracked African easterly wave was performed by \cite{reed1988evaluation} using positive relative vorticity anomalies.  This strategy was also applied by \cite{thorncroft2001african}, \cite{hodges2003comparison} and \cite{serra2010tracking}.  Other studies have used curvature vorticity anomalies \cite{belanger2014african, bain2014objective}, streamfunction \citep{berry2007african} and meridional velocity anomalies \citep{skinner2014projected}.
+Tropical easterly waves are featured more sparsely within the literature, but are nonetheless an important pointwise feature in climate datasets.  Pointwise tracking is complementary to statistical techniques which typically examine the variability, for instance, in the African Easterly Jet (AEJ) (\textit{i.e.}, \cite{ceron1999validation}).  The first manual study that identified and tracked African easterly wave was performed by \cite{reed1988evaluation} using positive relative vorticity anomalies.  This strategy was also applied by \cite{thorncroft2001african}, \cite{hodges2003comparison} and \cite{serra2010tracking}.  Other studies have used curvature vorticity anomalies \cite{belanger2014african, bain2014objective} and streamfunction \citep{berry2007african}.% and meridional velocity anomalies \citep{skinner2014projected}.
 
 %Storm tracks and African easterly waves were tracked by \cite{hodges2003comparison}.
 
@@ -568,8 +568,7 @@ field F = mean(field G, dist)
     F[p] = 0
     visited = []
     tovisit = [p]
-    %CMZ: shouldn't this be "while tovisit is not empty?"
-    while visited is not empty
+    while tovisit is not empty
       q = remove node from tovisit
       add q to visited
       F[p] = F[p] + G[q] * area[q]
