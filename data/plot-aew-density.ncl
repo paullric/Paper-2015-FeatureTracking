@@ -73,7 +73,7 @@ begin
   res@gsnContourNegLineDashPattern = 6
 
   res@cnLevelSelectionMode = "ExplicitLevels"
-  res@cnLevels = (/1,20,40,60,80,100,120,140,160,180,200,220,240,260,280,300,320,340,360,380,400/)
+  res@cnLevels = (/1,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200/)
   ;res@cnLevelSpacingF = 20.0
   ;res@cnMinLevelValF = 0.0
   ;res@cnMaxLevelValF = 400.0
@@ -86,7 +86,7 @@ begin
   res@gsnSpreadColorStart = 2
   res@gsnSpreadColorEnd = 23
 
-  res@tiMainString = "Northern Hemisphere Tropical Easterly Waves Counts from CFSR"
+  res@tiMainString = "Tropical Easterly Waves Counts from CFSR"
   plot(0) = gsn_csm_contour_map(wks, density, res)
 
   pres = True

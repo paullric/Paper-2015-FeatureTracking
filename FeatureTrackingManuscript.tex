@@ -56,7 +56,7 @@ T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
 \title{TempestExtremes:  A Framework for Scale-Insensitive Pointwise Feature Tracking on Unstructured Grids}
 
-\author{Paul A. Ullrich and Colin Zarzycki}
+\author{Paul A. Ullrich and Colin M. Zarzycki}
 
 \affil{Paul A. Ullrich, Department of Land, Air and Water Resources, University of California, Davis, One Shields Ave., Davis, CA 95616.  Email: paullrich@ucdavis.edu}
 
@@ -98,31 +98,32 @@ Automated pointwise feature tracking is an algorithmic technique for identificat
 \introduction  %% \introduction[modified heading if necessary]
 %TEXT
 
-Automated pointwise feature tracking has emerged as an important and desirable data processing capability in climate science.  Software tools for feature tracking -- typically referred to as ``trackers'' -- have been employed to evaluate model performance and answer pressing scientific questions regarding anticipated changes in atmospheric features under climate change.  Exploration of the regarding tracker literature exposes a vast breadth of potential techniques (see Appendices \ref{sec:ExtratropicalCycloneAlgorithms}, \ref{sec:TropicalCycloneAlgorithms} and \ref{sec:TropicalEasterlyWaveAlgorithms}) that have been applied to climate datasets with varied spatial resolution and temporal frequency.  Nonetheless, the definition of an optimal objective criteria for key atmospheric features has eluded development, and ambiguity in the formal definition of these features suggests that there may be no singular criteria capable of both perfect detection and zero false alarm rate.  Further, as observed by \cite{walsh2007objectively} and \citet{horn2014tracking} for tropical cyclones and \cite{neu2013imilast} for extratropical cyclones, feature tracking schemes can produce wildly varying results depending on the specific choice of threshold variables and values. Consequently we argue that blind application of singular tracking formulations should be avoided without first understanding tracker behavior to a variety of configurations. To this end, it is the goal of this paper to present TempestExtremes: a flexible, unified framework that enables a variety of tracking procedures to be quickly and easily applied across climate datasets of arbitrary spatial resolution and temporal frequency.
+Automated pointwise feature tracking is an algorithmic technique for identification and tracking of meteorological features such as extratropical cyclones, tropical cyclones and tropical easterly waves, and has emerged as an important and desirable data processing capability in climate science.  Software tools for feature tracking -- typically referred to as ``trackers'' -- have been employed to evaluate model performance and answer pressing scientific questions regarding anticipated changes in atmospheric features under climate change.  Exploration of the tracker literature has exposed a breadth of potential techniques that have been applied to climate datasets with varied spatial resolution and temporal frequency (a comprehensive review of the tracking literature can be found in Appendices \ref{sec:ExtratropicalCycloneAlgorithms}, \ref{sec:TropicalCycloneAlgorithms} and \ref{sec:TropicalEasterlyWaveAlgorithms}).  Nonetheless, the definition of an optimal objective criteria for key atmospheric features has eluded development, and ambiguity in the formal definition of these features suggests that there may be no singular criteria capable of both perfect detection and zero false alarm rate.  Further, as observed by \cite{walsh2007objectively} and \citet{horn2014tracking} for tropical cyclones and \cite{neu2013imilast} for extratropical cyclones, feature tracking schemes can produce wildly varying results depending on the specific choice of threshold variables and values. Therefore, blind application of singular tracking formulations should be avoided and adequately addressing uncertainties associated with objective tracking criteria requires an ensemble of detection thresholds and variables.  To this end, it is the goal of this paper to review the vast literature on trackers and use this information to inform the development of a unified framework (TempestExtremes) that enables a variety of tracking procedures to be quickly and easily applied across across arbitrary spatial resolution and temporal frequency.  This work is largely technical, but sets the stage for future studies on parameter sensitivity and optimization.
 
-Most algorithmic Lagrangian trackers of pointwise features (such as cyclones and eddies) share a common detection procedure:
+Most algorithmic Lagrangian trackers of pointwise features (such as cyclones and eddies) share a common procedure:
 \begin{itemize}
-\item[1.] Identify an initial set of candidate points by searching for local extrema.  Local extrema can be further isolated, for instance, by requiring that the local extrema be sufficiently anomalous when contrasted with their neighbors.  For most cyclonic structures, either minima in the sea level pressure field or maxima in the absolute value of the relative vorticity are used.
-\item[2.] Eliminate candidate points that do not satisfy a prescribed set of thresholds.  For instance, tropical cyclones typically require the presence of an upper-level warm core that is sufficiently near the sea level pressure minima that defines the storm center.
-\item[3.] Connect candidate points together in time to generate feature paths, eliminating paths that are of insufficient length or do not meet additional criteria.
-\end{itemize}  The procedure described above fits into a general framework known as MapReduce \citep{dean2008mapreduce}, which is a combination of a Map(), an embarrassingly parallel candidate identification procedure applied to individual time slices, and a Reduce(), which stitches candidates across time to build feature tracks.  A key advantage of employing this framework is that substantial work has been undertaken to understand optimal strategies for parallelization of MapReduce-type algorithms (e.g. \cite{Prabhat2012}) in order to mitigate bottlenecks associated with I/O and load balancing.  TempestExtremes currently implements a simple parallelization strategy via MPI, although future work on this issue is forthcoming.
-
-The development of a framework for feature tracking that is robust across essentially arbitrary datasets requires some additional considerations.  In particular, we expect that our framework should:
-\begin{itemize}
-\item[] ...use great-circle arcs for all distance calculations.  This avoids issues associated with latitude-longitude distance that emerges near the poles.
-\item[] ...support structured and unstructured grids.  This eliminates the need for post-processing of large native-grid output files and enables detection and characterization simultaneous with the model execution.
-\item[] ...not contain hard-coded variable names, so as to ensure robust applicability across reanalysis datasets and applicability to a variety of problems.
-\item[] ...allow for easy intercomparison of detection schemes by enabling detection criteria and thresholds that are compactly specified on the command line.
-\end{itemize}  Well-known automated software trackers include TRACK \citep{hodges2015track} and the Geophysical Fluid Dynamics Laboratory (GFDL) TSTORMS package \citep{vitart1997simulation}.  Both of these software packages have been used extensively to examine pointwise features in the atmosphere, but do not completely satisfy the four requirements above.
-
-Although the actual procedures used for feature tracking vary throughout the literature, a review of this material reveals several core algorithms (kernels) must be exposed to the user.  Based on our analysis, the most commonly employed kernels are as follows:
+\item[1.] Identify an initial set of candidate points by searching for local extrema.  Local extrema can be further specified, for instance, by requiring that the they be sufficiently anomalous when contrasted with their neighbors.  For most cyclonic structures, either minima in the sea level pressure field or maxima in the absolute value of the relative vorticity are used.
+\item[2.] Eliminate candidate points that do not satisfy a prescribed set of thresholds.  For instance, tropical cyclones typically require the presence of an upper-level warm core that is sufficiently near the sea level pressure minima that defines the storm center.  Additional criteria, such as a minimum threshold on relative vorticity can be used to eliminate spurious detections.  
+\item[3.] Connect candidate points together in time (referred to as \textit{stitching}) to generate feature paths, eliminating paths that are of insufficient length or do not meet additional criteria.
+\end{itemize}  Although the actual implementations of these three steps does vary throughout the literature, a review of this material reveals several core algorithms (kernels) must be exposed to the user.  Based on our analysis, the five most commonly employed kernels are as follows:
 \begin{itemize}
 \item Computation of anomalies in a data field from a spatially averaged mean.
 \item Identification of local extrema in a given 2D data field (for instance, sea level pressure minima).
 \item Determination of whether a closed contour exists in a data field around a particular point.
 \item Determination of whether, in the neighborhood of a particular point, a data field satisfies a given threshold.
 \item Stitching of candidates from sequential time slices to build feature tracks.
-\end{itemize}  It is desirable that any generalization of these kernels is insensitive to the spatial resolution of the input data. That is, criteria that require averaging or searching over a discrete number of grid points around each candidate (which is common throughout the early tracking literature) is incompatible with scale insensitivity since detection would be dependent on the spatial resolution of the data. Note that identification of local extrema is not a resolution-insensitive procedure, since the number of extrema will often scale with the number of spatial data points, and so initial identification is typically augmented with the more scale-insensitive closed contour criteria (see section \ref{sec:ClosedContour}).
+\end{itemize}  The development of a robust implementation of these five kernels will be the focus of the remainder of this paper.
+
+Feature tracking that is robust across essentially arbitrary datasets requires some additional considerations.  Detection criteria and thresholds for tracking are often tuned based on the characteristics of a particular dataset, such as temporal resolution, spatial resolution and regional coverage.  Unfortunately, this has led to an abundance of schemes that often cannot be directly compared, or applied in a more general context.  To this end, we focus on kernels that are insensitive to the characteristics of the input data. For instance, averaging or searching over a discrete number of grid points around each candidate (a common approach) is incompatible with scale insensitivity since the physical search radius would be dependent on the spatial resolution of the data.  Identification of local extrema is also a resolution-sensitive procedure, since the number of extrema will often scale with the number of spatial data points -- however, a closed contour criteria based on a physical distance is largely resolution-insensitive.  To achieve robust applicability, a general framework should:
+\begin{itemize}
+\item[] ...use great-circle arcs for all distance calculations.  This avoids issues associated with latitude-longitude distance that emerges near the poles.
+\item[] ...support structured and unstructured grids.  This eliminates the need for post-processing of large native-grid output files and enables detection and characterization simultaneous with the model execution.
+\item[] ...not contain hard-coded variable names, so as to ensure robust applicability across reanalysis datasets and applicability to a variety of problems.
+\item[] ...allow for easy intercomparison of detection schemes by enabling detection criteria and thresholds that are compactly specified on the command line.
+\end{itemize}  Well-known automated software trackers include TRACK \citep{hodges1994general, hodges1995feature, hodges2015track} and the Geophysical Fluid Dynamics Laboratory (GFDL) TSTORMS package \citep{vitart1997simulation}.  Both of these software packages have been used extensively to examine pointwise features in the atmosphere, but do not completely satisfy the four requirements above.
+
+%Feature tracking on the sphere was revisited by \cite{hodges1995feature}, which extended tracking algorithms designed for Cartesian geometry \cite{hodges1994general} that were built from image processing techniques.
+
 
 The remainder of the paper is organized as follows:  Section \ref{sec:Kernels} describes the algorithms and kernels that have been implemented in the TempestExtremes software framework.  Selected examples of tropical cyclone, extratropical cyclone and tropical easterly wave detection are then provided in section \ref{sec:SelectedExamples}, followed by conclusions in section \ref{sec:Conclusions}.  The appendices provide a review of relevant literature on pointwise feature trackers of extratropical cyclones (appendix \ref{sec:ExtratropicalCycloneAlgorithms}), tropical cyclones (appendix \ref{sec:TropicalCycloneAlgorithms}) and tropical easterly waves (appendix \ref{sec:TropicalEasterlyWaveAlgorithms}).  A technical guide to the use of the TempestExtremes tools \texttt{DetectCyclonesUnstructured} and \texttt{StitchNodes} is provided in appendices \ref{sec:DetectCyclonesUnstructuredAppendix} and \ref{sec:StitchNodesAppendix}.
 
@@ -132,6 +133,11 @@ The open-source software described in this manuscript has been released as part 
 \begin{center}
 \texttt{https://github.com/ClimateGlobalChange/tempestextremes}
 \end{center} 
+
+\subsection{Parallelization Considerations}
+
+Feature tracking fits well into a general framework known as MapReduce \citep{dean2008mapreduce}, which is a combination of a Map(), an embarrassingly parallel candidate identification procedure applied to individual time slices, and a Reduce(), which stitches candidates across time to build feature tracks.  A key advantage of employing this framework is that substantial work has been undertaken to understand optimal strategies for parallelization of MapReduce-type algorithms (e.g. \cite{Prabhat2012}) in order to mitigate bottlenecks associated with I/O and load balancing.  TempestExtremes currently implements a simple parallelization strategy via MPI, although future work on this issue is forthcoming.
+
 
 %However, there is a growing need for scale-insensitive detection techniques and unstructured grid support that is not well met with existing schemes.  Consequently, it is the goal of this paper is to describe a tracking technique that can be applied on essentially any grid at any resolution, and provide insight into currently available algorithmic techniques underlying modern tracking algorithms.
 
@@ -148,7 +154,25 @@ The open-source software described in this manuscript has been released as part 
 
 \section{TempestExtremes Algorithms and Kernels} \label{sec:Kernels}
 
-This section describes the building blocks that have been utilized in constructing our detection and characterization framework.  As mentioned earlier, in order to avoid sensitivity of the detection scheme to grid resolution, great-circle-distance has been employed throughout.  In terms of regular latitude-longitude coordinates, the great-circle-distance ($r$), for a sphere of radius $a$, between points $(\lambda_1, \varphi_1)$ and $(\lambda_2, \varphi_2)$ is defined via the symmetric operation
+This section describes the key building blocks that have been utilized in constructing our detection and characterization framework.  Pseudocode is utilized throughout to describe the structure of each algorithm.
+
+\subsection{Unstructured grid specification}
+
+For purposes of determining connectivity of the unstructured grid, we require the specification of a node graph (one such node graph is depicted in Figure \ref{fig:unstructured_grid}).  The connectivity information is stored textually as an adjacency list via a variable-length comma-separated variable file.  The total number of nodes ($N$) is specified at the top of the file, followed by $N$ lines containing the longitude (lon), latitude (lat), associated area, number of adjacent nodes, and finally a 1-indexed list of all adjacent nodes, such as depicted below:
+\ \\
+
+\noindent \begin{tabular}{|p{\textwidth}|}
+\hline \small \begin{verbatim}
+<total number of nodes>
+<lon>,<lat>,<area>,<# adj. nodes>,<first adj. node>,..,<last adj. node>
+...
+\end{verbatim} \\
+\hline
+\end{tabular}
+
+\subsection{Great circle distance}
+
+As mentioned earlier, in order to avoid sensitivity of the detection scheme to grid resolution, great-circle-distance has been employed throughout.  In terms of regular latitude-longitude coordinates, the great-circle-distance ($r$), for a sphere of radius $a$, between points $(\lambda_1, \varphi_1)$ and $(\lambda_2, \varphi_2)$ is defined via the symmetric operation
 \begin{equation}
 r(\lambda_1, \varphi_1; \lambda_2, \varphi_2) = a \arccos \left( \sin \varphi_1 \sin \varphi_2 + \cos \varphi_1 \cos \varphi_2 \cos (\lambda_1 - \lambda_2) \right).
 \end{equation}  Algorithmically, this calculation is implemented as \texttt{gcdist(p,q)} for given graph nodes \texttt{p} and \texttt{q}.
@@ -162,25 +186,11 @@ Three-dimensional ($k=3$) $k$-d trees \citep{bentley1975multidimensional} are us
 \item[] \texttt{S = kd\_tree\_all\_neighbors(K, p, dist)} locates all points that are within a distance \texttt{dist} of a point \texttt{p} within the $k$-d tree \texttt{K}.
 \end{itemize}
 
-\noindent A key advantage of $k$-d trees is their relatively efficient $O(n \log n)$ construction time and $O(\log n)$ average time nearest neighbor search.
-
-\subsection{Unstructured grid specification}
-
-For purposes of determining connectivity of the unstructured grid, we require the specification of a graph such as the one depicted in Figure \ref{fig:unstructured_grid}.  The connectivity information is stored textually as an adjacency list via a variable-length comma-separated variable file.  The total number of nodes ($N$) is specified at the top of the file, followed by $N$ lines containing the longitude (lon), latitude (lat), associated area, number of adjacent nodes, and finally a 1-indexed list of all adjacent nodes, such as depicted below:
-\ \\
-
-\noindent \begin{tabular}{|p{\textwidth}|}
-\hline \small \begin{verbatim}
-<total number of nodes>
-<lon>,<lat>,<area>,<# adj. nodes>,<first adj. node>,..,<last adj. node>
-...
-\end{verbatim} \\
-\hline
-\end{tabular}
+\noindent A key advantage of $k$-d trees is their relatively efficient $O(n \log n)$ construction time and $O(\log n)$ average time nearest neighbor search, and $O(n)$ data storage requirements.
 
 \subsection{Computing a spatial averaged mean}
 
-Many existing tracking algorithms use either a spatially-averaged mean field or an anomaly field computed against the spatially-averaged mean \citep{haarsma1993tropical,bengtsson1995hurricane}.  The mean operation (implemented in TempestExtremes as \texttt{\_MEAN()} in the variable specification) is computed on unstructured grids via graph search (see Algorithm \ref{alg:field_mean_value}).  Anomaly from the mean can then be computed in conjunction with the \texttt{\_DIFF} operator (see appendix \ref{sec:VariableSpecification}).
+Many existing tracking algorithms use either a spatially-averaged mean field or an anomaly field computed against the spatially-averaged mean \citep{haarsma1993tropical,bengtsson1995hurricane}.  The mean operation (implemented in TempestExtremes as \texttt{\_MEAN()} in the variable specification) is computed on unstructured grids via graph search (see Algorithm \ref{alg:field_mean_value}).  Anomaly from the mean can then be computed in conjunction with the \texttt{\_DIFF} operator (see Appendix \ref{sec:VariableSpecification}).
 
 \subsection{Extrema detection}
 
@@ -194,11 +204,11 @@ Here we propose an alternative closed contour criteria largely insensitive to mo
 
 \subsection{Thresholding}
 
-Additional threshold criteria may be applied at the Map() stage in order to further eliminate undesirable candidates.  For example, a common threshold criteria requires that a field \texttt{G} satisfy some minimum value within a distance \texttt{dist} of the candidate, as implemented in Algorithm \ref{alg:threshold_max}.
+Additional threshold criteria may be applied at the detection stage in order to further eliminate undesirable candidates.  For example, a common threshold criteria requires that a field \texttt{G} satisfy some minimum value within a distance \texttt{dist} of the candidate, as implemented in Algorithm \ref{alg:threshold_max}.  TempestExtremes implements thresholding via the command line argument \texttt{--thresholdcmd}.
 
 \subsection{Stitching}
 
-The basic track stitching procedure (which represents the Reduce() stage in MapReduce) is implemented in Algorithm \ref{alg:stitch_nodes} using the output from the Map() procedure at each time level (stored in set array \texttt{P[1..T]}), a maximum great-circle-distance between nodes, \texttt{dist}, and a maximum gap size, \texttt{maxgap}.  Here, gap size refers to the maximum number of sequential non-detections that can occur before a path is considered terminated.  This argument is useful, for instance, for tracking tropical storms that temporarily weaken below acceptable criteria before re-strengthening.
+The basic track stitching procedure (which represents the Reduce() stage in MapReduce) is implemented in Algorithm \ref{alg:stitch_nodes} using the output from the detection procedure at each time level (stored in set array \texttt{P[1..T]}) and requires additional parameters to specify a maximum great-circle-distance between nodes (\texttt{dist}), and a maximum gap size (\texttt{maxgap}).  Here, gap size refers to the maximum number of sequential non-detections that can occur before a path is considered terminated.  This argument is useful, for instance, for tracking tropical storms that temporarily weaken below acceptable criteria before re-strengthening.
 
 For simplicity, $k$-d trees are constructed at each time level in order to maximize the efficiency of the search.  Each candidate pair (time, node) can only be used in one path, and so construction simply requires exhausting the list of available candidates.  Once paths have been constructed, additional criteria can be applied -- for instance, minimum path length or additional criteria based on minimum path length or minimum distance between the start and endpoints of the path (see Appendix \ref{sec:StitchNodesAppendix}).  Thresholds based on field values may also be applied, \textit{e.g.} wind speed must be greater than a particular value for at least 8 time steps of each track.
 
@@ -266,7 +276,7 @@ Once the complete set of extratropical cyclone paths has been computed, total ex
 
 %CMZ: This section needs to be rewritten? It doesn't agree with new figure. For example, the _ABS function should be added if we are now using ABS(rel vort) to get waves in both hemisphere. I can edit if you provide new commands.
 
-Tropical easterly waves are our third example of a pointwise feature that has been assessed in the tracking literature.  In this example, tracking is performed in the northern hemisphere (southern hemisphere) using maxima (minima) in the 600hPa relative vorticity field.  Since CFSR only provides absolute vorticity, relative vorticity must first be extracted by taking the difference between absolute vorticity and the planetary vorticity (the Coriolis parameter).  This is done on the command line via \texttt{\_DIFF(ABS\_V\_L100,\_F())}, where \texttt{ABS\_V\_L100} is the CFSR absolute vorticity variable and \texttt{\_F()} is a built-in function for computing the Coriolis parameter (equal to $f = 2 \Omega \sin \phi$).  In the northern hemisphere, we follow \cite{thorncroft2001african} and isolate tropical easterly wave features by requiring a drop of relative vorticity equal to $5 \times 10^{-5}\ \mbox{s}^{-1}$, and have discarded detections outside of the latitudinal range $[0, 30N]$.  The command line used is as follows:
+Tropical easterly waves are our third example of a pointwise feature that has been assessed in the tracking literature.  In this example, northern hemisphere easterly waves (associated with positive relative vorticity) are tracked separately from southern hemisphere easterly waves (associated with negative relative vorticity) be instantiating \texttt{DetectCyclonesUnstructured} and \texttt{StitchNodes} twice and combining the resultant track files.  All tracking is performed on the 600hPa relative vorticity field, using relative vorticity maxima for northern hemisphere waves and relative vorticity minima for southern hemisphere waves.  Since CFSR only provides absolute vorticity, relative vorticity must first be extracted by taking the difference between absolute vorticity and the planetary vorticity (the Coriolis parameter).  This is done on the command line via \texttt{\_DIFF(ABS\_V\_L100,\_F())}, where \texttt{ABS\_V\_L100} is the CFSR absolute vorticity variable and \texttt{\_F()} is a built-in function for computing the Coriolis parameter (equal to $f = 2 \Omega \sin \phi$).  In the northern hemisphere, we follow \cite{thorncroft2001african} and isolate tropical easterly wave features by requiring a drop of relative vorticity equal to $5 \times 10^{-5}\ \mbox{s}^{-1}$.  The command line used is as follows:
 
 {\small \begin{verbatim}
   ./DetectCyclonesUnstructured
@@ -278,7 +288,7 @@ Tropical easterly waves are our third example of a pointwise feature that has be
     --minlat -35.0 --maxlat 35.0 
 \end{verbatim}}
 
-Northern hemisphere tropical easterly wave paths are constructed using a maximum distance of 3$^\circ$ great-circle-distance between subsequent detections, a minimum path length equal to 8 sequential detections and no allowed gaps.  We further require that the easterly waves have a distance of at least 10$^\circ$ between start and endpoints and are present in the northern hemisphere ($\phi \geq 0^\circ$) for at least 8 timesteps.  The command line is as follows.
+Tropical easterly wave paths are constructed using a maximum distance of 3$^\circ$ great-circle-distance between subsequent detections, a minimum path length equal to 8 sequential detections, no allowed gaps, and a distance of at least 10$^\circ$ between track start and endpoint.  Northern (southern) hemisphere waves must also be present in the northern (southern) hemisphere for at least 8 timesteps (2 days).  The command line for northern hemisphere waves is as follows:
 
 {\small \begin{verbatim}
   ./StitchNodes
@@ -320,7 +330,7 @@ This work has been supported by NASA award NNX16AG62G ``TempestExtremes: Indicat
 \appendix
 \subsection{A Review of Extratropical Cyclone Tracking Algorithms} \label{sec:ExtratropicalCycloneAlgorithms}
 
-This appendix reviews the existing literature on extratropical cyclone tracking, which has been one of the earliest and most common instances of both manual and automated feature tracking.  Manual counts of cyclones were performed by \cite{petterssen1956weather} in the Northern hemisphere from 1899-1939, and latter binned by \cite{klein1957principle} to determine the spatial distribution of such storms.  These techniques were later refined by \cite{whittaker1982atlas} by accounting for cyclone trajectories.  A similar survey in the Southern hemisphere was performed by \cite{taljaard1967development} for July 1957 - December 1958.  Manual tracking and characterization of cyclones was also performed by \cite{akyildiz1985systematic} using ECMWF forecast data for the 1981/82 winter.
+This appendix reviews the existing literature on extratropical cyclone tracking, which is one of the earliest and most common instances of both manual and automated feature tracking.  Manual counts of cyclones were performed by \cite{petterssen1956weather} in the Northern hemisphere from 1899-1939, and latter binned by \cite{klein1957principle} to determine the spatial distribution of such storms.  These techniques were later refined by \cite{whittaker1982atlas} by accounting for cyclone trajectories.  A similar survey in the Southern hemisphere was performed by \cite{taljaard1967development} for July 1957 - December 1958.  Manual tracking and characterization of cyclones was also performed by \cite{akyildiz1985systematic} using ECMWF forecast data for the 1981/82 winter.
 
 One of the first automated detection and tracking for extratropical cyclones was developed by \cite{williamson1981storm} using nonlinear optimization to fit cyclonic profiles to anomalies in the 500-mb geopotential height field.  Storms were then tracked over a short forecast period using the best fit to the cyclone's centerpoint.  Counts of cyclones neglecting the cyclone trajectory were automatically generated from climate model output for both hemispheres by \cite{lambert1988cyclone} using local minima in 1000-hPa geopotential height.  This method had some shortcomings, including mischaracterization of local lows due to Gibbs' ringing and topographically-driven lows.  To overcome these problems, \cite{alpert1990climatological} proposed an additional minimum threshold on the local pressure gradient.  Similarly, \cite{le1990comparison} detected cyclones in ECMWF pressure data using a local minima in the sea-level pressure that must also be 4 mb below the average sea-level pressure of neighboring grid points, and must persist for three successive 6- or 12- hour intervals.  \cite{murray1991numerical} extracted low pressure centers from interpolated GCM data using local optimization, based on earlier work in \cite{rice1982durivation}.  These original papers primarily sought minimum in the SLP field or looked for maxima in the Laplacian of the SLP field.
 
@@ -337,17 +347,15 @@ Several modern extratropical cyclone detection algorithms remain in use, having 
 
 \item \cite{zolina2002improving}:  Assessed T106 ($\sim$ 125 km) and T42 ($\sim$ 300 km) datasets.  Search on local minima in the SLP field.
 
-\item \cite{pinto2005sensitivities}:  Assessed T42 ($\sim$ 300 km) regridded NCEP reanalysis, regridded onto a 0.75$^\circ$ grid by cubic spline interpolation.  Search on local minima in pressure field with maxima of quasi-geostrophic relative vorticity, computed from the Laplacian of pressure, within 1200km.  Cyclones over topography above 1500m are removed.  Require quasi-geostrophic relative vorticity $> 0.1 hPa / (^\circ \mbox{lat})$ and retain only the strongest detections within 3$^\circ$.  Cyclone tracking requires a prediction velocity and search following \cite{murray1991numerical}.
+\item \cite{pinto2005sensitivities}:  Assessed T42 ($\sim$ 300 km) regridded NCEP reanalysis, regridded onto a 0.75$^\circ$ grid by cubic spline interpolation.  Search on local minima in pressure field with maxima of quasi-geostrophic relative vorticity, computed from the Laplacian of pressure, within 1200km.  Cyclones over topography above 1500m are removed.  Require quasi-geostrophic relative vorticity $> 0.1 \mbox{hPa} / (^\circ \mbox{lat})$ and retain only the strongest detections within 3$^\circ$.  Cyclone tracking requires a prediction velocity and search following \cite{murray1991numerical}.
 
 \item \cite{benestad2006use}:  Assessed 2.5$^\circ$ ERA40 data.  Search uses multiple least-squares regression to estimate the values of the coefficients of a Fourier approximation followed by 1D search in north-south and east-west directions (in effect smoothing the SLP field).
 
-\item \cite{simmonds2008arctic}:  Assessed several 2.5$^\circ$ datasets over the arctic.  Search on local minima in the Laplacian of pressure, rejecting cyclones over topography above 1000m and requiring the presence of a nearby pressure minima.  Identified lows must satisfy a Laplacian with value $> 0.2 hPa / (^\circ \mbox{lat})^2$ over a radius of 2$^\circ$.  Tracking uses a probability estimate using a predicted position.
+\item \cite{simmonds2008arctic}:  Assessed several 2.5$^\circ$ datasets over the arctic.  Search on local minima in the Laplacian of pressure, rejecting cyclones over topography above 1000m and requiring the presence of a nearby pressure minima.  Identified lows must satisfy a Laplacian with value $> 0.2 \mbox{hPa} / (^\circ \mbox{lat})^2$ over a radius of 2$^\circ$.  Tracking uses a probability estimate using a predicted position.
 
 %\item \cite{hewson1997objective}:
 
 \end{itemize}
-
-Feature tracking on the sphere was revisited by \cite{hodges1995feature}, which extended tracking algorithms designed for Cartesian geometry \cite{hodges1994general} that were built from image processing techniques.
 
 \subsection{A Review of Tropical Cyclone Tracking Algorithms} \label{sec:TropicalCycloneAlgorithms}
 
@@ -360,7 +368,7 @@ A tabulated overview of the thresholds utilized by many of these schemes can be 
 
 \item \cite{wu1992gcm}: Assessed a $7.5^\circ$ longitude $\times$ $4.5^\circ$ latitude dataset.  Search on minimum 1000mb geopotential height, requiring positive 950mb relative vorticity, negative 950mb divergence, positive 500mb vertical velocity, latitude $<$ 40.5$^\circ$, 200mb minus 1000mb layer thickness must be locally maximal and exceed by 60 m the average layer thickness within 1500km west to east, and 950mb wind must be $>$ 17.2 m/s locally.  Cyclones are tracked over a range of 7.5$^\circ$ longitude or 9$^\circ$ latitude per day.
 
-\item \cite{haarsma1993tropical}: Assessed a $\sim$ 300 km dataset.  Search on local minimum PSL and require 850mb relative vorticity $> 3.5 \times 10^{-5} \mbox{s}^{-1}$, and temperature anomaly at 250mb $\Delta T250 > 0.5 K$, at 500mb $\Delta T500 > -0.5 K$, and $\Delta T250 - \Delta T850 > -1.0 K$, where the anomaly is computed against a $15^\circ \times 15^\circ$ spatial mean around the center of the storm.  Cyclones are tracked for a minimum of 3 days.
+\item \cite{haarsma1993tropical}: Assessed a $\sim$ 300 km dataset.  Search on local minimum PSL and require 850mb relative vorticity $> 3.5 \times 10^{-5} \mbox{s}^{-1}$, and temperature anomaly at 250mb $\Delta T250 > 0.5 \mbox{K}$, at 500mb $\Delta T500 > -0.5 \mbox{K}$, and $\Delta T250 - \Delta T850 > -1.0 \mbox{K}$, where the anomaly is computed against a $15^\circ \times 15^\circ$ spatial mean around the center of the storm.  Cyclones are tracked for a minimum of 3 days.
 
 \item \cite{bengtsson1995hurricane, bengtsson1996will}:  Assessed a T106 ($\sim$ 125 km) dataset.  Search on 850mb relative vorticity $> 3.5 \times 10^{-5} \mbox{s}^{-1}$.  Require a 850mb wind maximum $> 15$ m/s, local SLP minimum, and mean 850mb wind $>$ mean 300mb wind within 7x7 grid points around candidate.  Further require temperature anomaly sum $\Delta T700+ \Delta T500+ \Delta T300 > 3$ K and $\Delta T300 > \Delta T850$ where the anomaly is computed against a 7x7 gridpoint average centered on candidate.  Cyclones are tracked for a minimum of 1.5 days.
 
@@ -408,7 +416,7 @@ A tabulated overview of the thresholds utilized by many of these schemes can be 
 
 % CMZ: I can't claim to have read all of these, but, for example, Skinner+Diffenbaugh 2014 is an Eulerian technique. Are we defining pointwise as Lagrangian techniques?
 
-Tropical easterly waves are featured more sparsely within the literature, but are nonetheless an important pointwise feature in climate datasets.  Pointwise tracking is complementary to statistical techniques which typically examine the variability, for instance, in the African Easterly Jet (AEJ) (\textit{i.e.}, \cite{ceron1999validation}).  The first manual study that identified and tracked African easterly wave was performed by \cite{reed1988evaluation} using positive relative vorticity anomalies.  This strategy was also applied by \cite{thorncroft2001african}, \cite{hodges2003comparison} and \cite{serra2010tracking}.  Other studies have used curvature vorticity anomalies \cite{belanger2014african, bain2014objective}, streamfunction \citep{berry2007african} and meridional velocity anomalies \citep{skinner2014projected}.
+Tropical easterly waves are featured more sparsely within the literature, but are nonetheless an important pointwise feature in climate datasets.  Pointwise tracking is complementary to statistical techniques which typically examine the variability, for instance, in the African Easterly Jet (AEJ) (\textit{i.e.}, \cite{ceron1999validation}).  The first manual study that identified and tracked African easterly wave was performed by \cite{reed1988evaluation} using positive relative vorticity anomalies.  This strategy was also applied by \cite{thorncroft2001african}, \cite{hodges2003comparison} and \cite{serra2010tracking}.  Other studies have used curvature vorticity anomalies \cite{belanger2014african, bain2014objective} and streamfunction \citep{berry2007african}.% and meridional velocity anomalies \citep{skinner2014projected}.
 
 %Storm tracks and African easterly waves were tracked by \cite{hodges2003comparison}.
 
@@ -419,6 +427,9 @@ Tropical easterly waves are featured more sparsely within the literature, but ar
 
 \subsection{Software Documentation: DetectCyclonesUnstructured} \label{sec:DetectCyclonesUnstructuredAppendix}
 
+This section contains the software documentation for the executable \texttt{DetectCyclonesUnstructured} from the TempestExtremes package.  The software is provided for use within a command-line shell, such as bash.
+
+{\small
 \begin{verbatim}
 Usage: DetectCyclonesUnstructured <parameter list>
 Parameters:
@@ -445,6 +456,7 @@ Parameters:
   --out_header <bool> [false] 
   --verbosity <integer> [0] 
 \end{verbatim}
+}
 
 \begin{itemize}
 \item[] \texttt{--in\_data <string>} \\ A list of input datafiles in NetCDF format, separated by semi-colons.
@@ -519,6 +531,9 @@ The \texttt{DetectCyclonesUnstructured} executable supports parallelization via 
 
 \subsection{Software Documentation: StitchNodes} \label{sec:StitchNodesAppendix}
 
+This section contains the software documentation for the executable \texttt{StitchNodes} from the TempestExtremes package.
+
+{\small
 \begin{verbatim}
 Usage: StitchNodes <parameter list>
 Parameters:
@@ -534,6 +549,7 @@ Parameters:
   --timestride <integer> [1] 
   --out_format <string> ["std"] (std|visit)
 \end{verbatim}
+}
 
 \begin{itemize}
 \item[] \texttt{--in <string>} \\ The input file (a list of candidates from DetectCyclonesUnstructured).
@@ -568,8 +584,7 @@ field F = mean(field G, dist)
     F[p] = 0
     visited = []
     tovisit = [p]
-    %CMZ: shouldn't this be "while tovisit is not empty?"
-    while visited is not empty
+    while tovisit is not empty
       q = remove node from tovisit
       add q to visited
       F[p] = F[p] + G[q] * area[q]
@@ -709,7 +724,7 @@ path set S = stitch_nodes(set array P[1..T], dist, maxgap)
 \begin{center}
 \includegraphics[width=4in]{UnstructuredGrid.pdf}
 \end{center}
-\caption{An example adjacency graph describing an unstructured grid (blue lines), where nodes are co-located with volume centerpoint locations (solid circles) and edges connect adjacent volumes.} \label{fig:unstructured_grid}
+\caption{An example node graph describing an unstructured grid (blue lines), where nodes are co-located with volume centerpoint locations (solid circles) and edges connect adjacent volumes.} \label{fig:unstructured_grid}
 \end{figure}
 
 \begin{figure}[H]
