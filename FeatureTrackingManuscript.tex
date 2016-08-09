@@ -36,6 +36,8 @@
 \newcommand\BibTeX{{\rmfamily B\kern-.05em \textsc{i\kern-.025em b}\kern-.08em
 T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
+
+
 \usepackage{newfloat}
 \DeclareFloatingEnvironment[fileext=frm,placement={!ht},name=Algorithm]{algorithm}
 \captionsetup[algorithm]{labelfont=bf}
@@ -48,7 +50,6 @@ T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 \newcommand{\diffsq}[2]{\frac{d^2 #1}{{d #2}^2}}
 \newcommand{\pdiff}[2]{\frac{\partial #1}{\partial #2}}
 \newcommand{\pdiffsq}[2]{\frac{\partial^2 #1}{{\partial #2}^2}}
-
 
 \begin{document}
 
@@ -393,6 +394,8 @@ A tabulated overview of the thresholds utilized by many of these schemes can be 
 \item \cite{camargo2002improving}:  Assessed a T42 ($\sim$ 300 km) climate dataset.  Similar to \cite{bengtsson1995hurricane, bengtsson1996will}, except basin-specific thresholds are applied for 850hPa relative vorticity, 850hPa wind speed, and temperature anomaly sum $\Delta T700+ \Delta T500+ \Delta T300$. Thresholds are determined by sampling the tails of probability density functions for relevant variables in each ocean basin. Following detection stage, apply relaxed 850hPa relative vorticity threshold ($> 1.5 \times 10^{-5} \mbox{s}^{-1}$) to area 3x3 grid points around prior detections to construct trajectories. Cyclones are tracked for at least 2 (1.5) days in daily (6-hourly) output. 
 
 \item \cite{tsutsui2002implications}:  Assessed a T42 (2.8$^\circ$, $\sim$ 300 km) dataset.  Search is performed similar to \cite{tsutsui1996simulated}, but with a simplified criteria.  PSL is required to be less than the local average minus 2 hPa, and local average must be less than periphery average minus 2hPa.  Layer thickness between 200hPa and 700hPa, denoted by $Z$, must satisfy $Z_0 + \max(Z_{\pm 1 \Delta}) > 2 \max(Z_{\pm 2 \Delta})$, where $Z_{\pm 1 \Delta}$ denotes immediate neighbors and $Z_{\pm 2 \Delta}$ denotes the periphery.
+
+\item \cite{cheung2002formation, halperin2013evaluation}: Similar to \citet{walsh1997objective}. Assessed tropical cyclogenesis in weather forecast models. Required a gridpoint maximum in 850 hPa relative vorticity larger than all surrounding gridpoints within 4\degree{} and either a local maximum in 200-500 hPa average temperature or 200-1000 hPa geopotential thickness that was offset by no more than 2\degree{} from associated PSL center. In \citet{halperin2013evaluation}, TCs must persist for at least 24 hours and have a 925 hPa horizontal wind speed greater than a model-specific threshold within 5\degree{} of PSL center.
 
 \item \cite{walsh2004fine}:  Assessed a 30 km dataset using a similar tracking strategy to \cite{nguyen2001interannual}.  The temperature anomaly was computed against a 1200km longitude $\times$ 400km latitude region, and the mean wind speed was computed over a 800km $\times$ 800km region around the storm.  Further required that V10 $\geq$ 17 m/s near storm.
 
