@@ -16,7 +16,7 @@
 %% -----------------------------------------------------------------
 \NeedsTeXFormat{LaTeX2e}[1995/12/01]
 \ProvidesClass{copernicus}
-    [2015/12/14 8.00 Copernicus papers]
+    [2016/01/22 8.09 Copernicus papers]
 \frenchspacing
 \clubpenalty10000
 \widowpenalty10000
@@ -85,13 +85,13 @@
 \DeclareOption*{\PassOptionsToClass{\CurrentOption}{article}}
 \ProcessOptions
 \if@stage@final\else\@twostagejnltrue\fi
+\if@cop@home\else
+  \if@stage@final\else\@stage@finaltrue\@manuscripttrue\fi
+\fi
 \if@manuscript
   \@sansseriffacefalse
   \@sansserifheaderfalse
   \@abstractcenteredfalse
-\fi
-\if@cop@home\else
-  \if@stage@final\else\@stage@finaltrue\@manuscripttrue\fi
 \fi
 \LoadClass[fleqn]{article}
 \AtBeginDocument{\mathindent\z@}
@@ -156,11 +156,11 @@
 \if@stage@final
   \hoffset\dimexpr-1in+\bleed\relax
   \voffset\dimexpr-1in+\bleed\relax
-\if@manuscript
-  \paperheight\dimexpr240mm+2\bleed\relax%2015-12-14
-\else
-  \paperheight\dimexpr277mm+2\bleed\relax
-\fi
+  \if@manuscript
+    \paperheight\dimexpr240mm+2\bleed\relax%2015-12-14
+  \else
+    \paperheight\dimexpr277mm+2\bleed\relax
+  \fi
   \paperwidth\dimexpr210mm+2\bleed\relax
   \@tempdima\dimexpr1in+\hoffset\relax
   \@tempdimb\dimexpr\@tempdima+\paperwidth-2\bleed\relax
@@ -278,6 +278,12 @@
   %~\\[12pt]
   }
 \if@stage@final
+  \def\ps@plain{%only used for manuscript
+     \let\@mkboth\@gobbletwo
+     \let\@oddhead\@empty
+     \let\@evenhead\@empty
+     \def\@oddfoot{\reset@font\bfseries\hfil\thepage\hfil}%
+     \let\@evenfoot\@oddfoot}
   \def\ps@headings{%
     \def\@oddhead{%
       \runningheaderfont
@@ -641,13 +647,26 @@
     \fi\fi
     \begin{nolinenumbers}%
     \if@cop@home
-      \parbox[b]{87mm}{\fontsize{8}{11}\usefont{T1}{ma1}{m}{n}%
-        \@journalInfo\\
-        \@journalurlInfo\\
-        \if@noref\else
-           doi:10.5194/\@journalnameshortlower-\@pvol-\@fpage-\@pyear
-        \fi\\
-        \@journalcopyright}%
+      \ifx\@msnumber\@undefined
+        \CopernicusError{Please add \string\msnumber{...}}{You must provide the number of the manuscript}%
+        \global\let\@msnumber\@empty
+      \else
+      \ifx\@msnumber\@empty
+        \CopernicusError{Please fill \string\msnumber{...}}{You must provide the number of the manuscript}%
+      \fi\fi
+      \parbox[b]{107mm}{\fontsize{8}{11}\usefont{T1}{ma1}{m}{n}%
+        %\@journalInfo\\
+        %\@journalurlInfo\\
+        %\if@noref\else
+        %   doi:10.5194/\@journalnameshortlower-\@pvol-\@fpage-\@pyear
+        %\fi\\
+        %\@journalcopyright
+        \@journalnameabbreviation, \if@noref\else\doi{10.5194/\@msnumber}, \@pyear\fi\\
+        Manuscript under review for journal \@journalnameabbreviationbase\\
+        Published: \@published\\
+        \copyright\ Author(s) \@pyear. CC-BY 3.0 License.%
+        %\\[1mm]\includegraphics[width=1.5cm]{CreativeCommons_Attribution_License.png}%
+      }%
       \hfill
       \setbox\z@\hbox{\@journallogo}\@tempdima\dimexpr\ht\z@-17mm\relax
       \smash{\lower\dimexpr3mm+\@tempdima\relax\llap{\@journallogo}}%war2.5mm
@@ -884,7 +903,11 @@
 \fi
 \RequirePackage[T1]{fontenc}
 \RequirePackage{textcomp}
-\ifx\xmltexversion\@undefined\RequirePackage[utf8]{inputenc}\fi
+\ifx\xmltexversion\@undefined
+  \RequirePackage[utf8]{inputenc}
+  \DeclareUnicodeCharacter{394}{$\Delta$}
+  \DeclareUnicodeCharacter{8710}{$\Delta$}
+\fi
 \let\old@classoptionslist\@classoptionslist
 \edef\@classoptionslist{english,\old@classoptionslist}
 \RequirePackage{babel}
@@ -1213,7 +1236,7 @@
   \lccode`\~=`\>\relax
   \lowercase{\def~{\textgreater}}%
   \lccode`\~=0\relax
-  \catcode`\#=\active %new, 2015-12-14 %new, 2015-12-14 %new, 2015-12-14
+  \catcode`\#=\active
   \catcode`\_=\active
   \catcode`\<=\active
   \catcode`\>=\active
@@ -1380,7 +1403,6 @@
          \nolinenumbers
        \else%new, 2015-12-14
          \setpagewiselinenumbers\switchlinenumbers%cf. the switch option
-         %\columnwiselinenumberstrue%\realpagewiselinenumbers to be checked
          \linenumbers
        \fi
      \fi
@@ -1540,7 +1562,7 @@
     \ifx\xmltexversion\@undefined\else, produced from XML\fi}
   \if@nohyperref\pdfinfo{/Creator (\@pdfcreator)}\fi
 \else
-  \usepackage[bookmarks=false]{hyperref}
+  \usepackage[bookmarks=false,pdfborder={0 0 0}]{hyperref}
   \pdfstringdefDisableCommands{\let\boldsymbol\relax\let\vec\relax}
 \fi
 \ifx\xmltexversion\@undefined
@@ -1668,7 +1690,10 @@
               \href{http://\@journalurl}{\@journalnameshort}}\\[2mm]
              \if@noref
              \else
-               {\small\@pvol, \@fpage\if@nolastpage\else{--\@lpage}\fi, \@pyear}\\[1mm]%
+               {\fontsize{8.7}{11}\selectfont
+                %\@pvol, \@fpage\if@nolastpage\else{--\@lpage}\fi, \@pyear
+                \hypersetup{urlcolor=paneltext}\doi{10.5194/\@msnumber}%
+               }\\[1mm]%
              \fi
              \rule{0.8\panelwidth}{1.1pt}\\[1mm]
              {\bfseries\mathversion{bold}%
@@ -1767,6 +1792,7 @@
 \def\pubvol#1{\if@cop@home\if@corrigendum\else\gdef\@pvol{#1}\fi\fi}%+1,+2,+d
 \let\pubnum\@gobble%not for TeX, only for secondary data use
 \def\correspondence#1{\gdef\@corresp{#1}}              \def\@corresp{}%+1,+2,+d
+\def\msnumber#1{\if@cop@home\gdef\@msnumber{#1}\fi}
 \if@stage@final
 \else
   \def\affilfontsize#1{\def\@affilfontsize{#1}}
@@ -2147,9 +2173,16 @@
 \fi
 %%Now, journal configuration from copernicus.cfg:
 \@addjournalconfig
-%%Now, additions for the the discussion stage:
-\if@stage@final\else
+%%Now, additions the manuscript and for the the discussion stage:
+\if@stage@final
+  \if@manuscript
+    \definecolor{textcol}{rgb}{0,0,0}
+    \definecolor{bgcol}{rgb}{1,1,1}
+    \definecolor{barcol}{rgb}{1,1,1}
+  \fi
+\else
   \edef\@journalname{\@journalname\space Discussions}
+  \let\@journalnameabbreviationbase\@journalnameabbreviation
   \edef\@journalnameabbreviation{\@journalnameabbreviation\space Discuss.}
   \edef\@journalnameshort{\@journalnameshort D}
   \edef\@journalnameshortlower{\@journalnameshortlower d}
