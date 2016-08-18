@@ -103,17 +103,6 @@ Feature tracking that is robust across essentially arbitrary datasets requires s
 
 The remainder of the paper is organized as follows:  Section \ref{sec:Kernels} describes the algorithms and kernels that have been implemented in the TempestExtremes software framework.  Selected examples of tropical cyclone, extratropical cyclone and tropical easterly wave detection are then provided in section \ref{sec:SelectedExamples}, followed by conclusions in section \ref{sec:Conclusions}.  The appendices provide a review of relevant literature on pointwise feature trackers of extratropical cyclones (appendix \ref{sec:ExtratropicalCycloneAlgorithms}), tropical cyclones (appendix \ref{sec:TropicalCycloneAlgorithms}) and tropical easterly waves (appendix \ref{sec:TropicalEasterlyWaveAlgorithms}).  A technical guide to the use of the TempestExtremes tools \texttt{DetectCyclonesUnstructured} and \texttt{StitchNodes} is provided in appendices \ref{sec:DetectCyclonesUnstructuredAppendix} and \ref{sec:StitchNodesAppendix}.
 
-\subsection{Code and Data Availability}
-
-The open-source software described in this manuscript has been released as part of the TempestExtremes software package, and is available for use under the Lesser GNU Public License (LGPL).  All software can be obtained from GitHub at:
-\begin{center}
-\texttt{https://github.com/ClimateGlobalChange/tempestextremes}
-\end{center} 
-
-\subsection{Parallelization Considerations}
-
-Feature tracking fits well into a general framework known as MapReduce \citep{dean2008mapreduce}, which is a combination of a Map(), an embarrassingly parallel candidate identification procedure applied to individual time slices, and a Reduce(), which stitches candidates across time to build feature tracks.  A key advantage of employing this framework is that substantial work has been undertaken to understand optimal strategies for parallelization of MapReduce-type algorithms (e.g. \cite{Prabhat2012}) in order to mitigate bottlenecks associated with I/O and load balancing.  TempestExtremes currently implements a simple parallelization strategy via MPI, although future work on this issue is forthcoming. As a timing example, TempestExtremes with MPI (16 tasks) finds and tracks tropical cyclones in 10 years of six-hourly climate data on a 0.5$^\circ$ latitude-longitude grid in an average of 3.8 minutes on the National Center for Atmospheric Research's (NCAR's) Yellowstone supercomputer.
-
 %However, there is a growing need for scale-insensitive detection techniques and unstructured grid support that is not well met with existing schemes.  Consequently, it is the goal of this paper is to describe a tracking technique that can be applied on essentially any grid at any resolution, and provide insight into currently available algorithmic techniques underlying modern tracking algorithms.
 
 %\section{Automated tracking}
@@ -186,6 +175,10 @@ Additional threshold criteria may be applied at the detection stage in order to 
 The basic track stitching procedure (which represents the Reduce() stage in MapReduce) is implemented in Algorithm \ref{alg:stitch_nodes} using the output from the detection procedure at each time level (stored in set array \texttt{P[1..T]}).  It requires additional parameters to specify a maximum great-circle-distance between nodes (\texttt{dist}), and a maximum gap size (\texttt{maxgap}).  Here, gap size refers to the maximum number of sequential non-detections that can occur before a path is considered terminated.  This argument is useful, for instance, for tracking tropical storms that temporarily weaken below acceptable criteria before re-strengthening.
 
 For simplicity, $k$-d trees are constructed at each time level in order to maximize the efficiency of the search.  Each candidate pair (time, node) can only be used in one path, and so construction simply requires exhausting the list of available candidates.  Once paths have been constructed, additional criteria can be applied -- for instance, minimum path length or additional criteria based on minimum path length or minimum distance between the start and endpoints of the path (see Appendix \ref{sec:StitchNodesAppendix}).  Thresholds based on field values may also be applied, \textit{e.g.} wind speed must be greater than a particular value for at least 8 time steps of each track.
+
+\subsection{Parallelization Considerations}
+
+Feature tracking fits well into a general framework known as MapReduce \citep{dean2008mapreduce}, which is a combination of a Map(), an embarrassingly parallel candidate identification procedure applied to individual time slices, and a Reduce(), which stitches candidates across time to build feature tracks.  A key advantage of employing this framework is that substantial work has been undertaken to understand optimal strategies for parallelization of MapReduce-type algorithms (e.g. \cite{Prabhat2012}) in order to mitigate bottlenecks associated with I/O and load balancing.  TempestExtremes currently implements a simple parallelization strategy via MPI, although future work on this issue is forthcoming. As a timing example, TempestExtremes with MPI (16 tasks) finds and tracks tropical cyclones in 10 years of six-hourly climate data on a 0.5$^\circ$ latitude-longitude grid in an average of 3.8 minutes on the National Center for Atmospheric Research's (NCAR's) Yellowstone supercomputer.
 
 \section{Selected examples} \label{sec:SelectedExamples}
 
@@ -287,14 +280,15 @@ For this example, we use the high-order regridding package TempestRemap \citep{u
 Automated pointwise feature trackers have been frequently and successfully employed over the past several decades to extract useful information from large climate datasets.  With spatial and temporal resolution increasing rapidly in response to enhanced computational resources, climate datasets have grown increasingly unwieldy and so there has been a growing need for such large dataset processing tools.  This paper has outlined a framework for pointwise feature tracking (TempestExtremes) that exposes a suite of generalized kernels drawn from the literature on trackers of the past several decades.  This framework is sufficiently robust to be applicable to many climate and weather datasets, including data on unstructured grids.  We expect such a framework would be useful for isolating uncertainties that emerge from particular parameter choices in tracking schemes, or to compute optimal threshold values for detecting pointwise features in, e.g. reanalysis data.  Future development plans in TempestExtremes include the construction of analogous kernels for tracking areal features (blobs), such as clouds or atmospheric rivers.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% ACKNOWLEDGEMENTS
+%% CODE AND DATA AVAILABILITY
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\pagebreak
-\begin{acknowledgements}
-This work has been supported by NASA award NNX16AG62G ``TempestExtremes: Indicators of change in the characteristics of extreme weather.''  The authors would like to thank Dr. Kevin Reed for his efforts ensuring the quality of the software package.
-\end{acknowledgements}
-\pagebreak
+\subsection*{Code Availability}
+
+The open-source software described in this manuscript has been released as part of the TempestExtremes software package, and is available for use under the Lesser GNU Public License (LGPL).  All software can be obtained from GitHub at:
+\begin{center}
+\texttt{https://github.com/ClimateGlobalChange/tempestextremes}
+\end{center} 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% APPENDIX
@@ -425,8 +419,8 @@ This section contains the software documentation for the executable \texttt{Dete
 {\small
 \begin{verbatim}
 Usage: DetectCyclonesUnstructured <parameter list>
-Parameters:
-  --in_data <string> [""] 
+Parameters:  --in_data <string> [""] 
+
   --in_data_list <string> [""]
   --in_connect <string> [""] 
   --out <string> [""] 
@@ -564,6 +558,22 @@ Parameters:
 \end{itemize}
 \item[] \texttt{-\;\!\!-timestride <integer>} \\ Only examine discrete times at the given stride (by default 1).
 \end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% ACKNOWLEDGEMENTS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{acknowledgements}
+This work has been supported by NASA award NNX16AG62G ``TempestExtremes: Indicators of change in the characteristics of extreme weather.''  The authors would like to thank Dr. Kevin Reed for his efforts ensuring the quality of the software package.
+\end{acknowledgements}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% BIBLIOGRAPHY
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\bibliography{FeatureTrackingBibliography}
+\bibliographystyle{copernicus}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% ALGORITHMS
@@ -764,9 +774,5 @@ path set S = stitch_nodes(set array P[1..T], dist, maxgap)
 \end{center}
 \caption{The local neighborhood of a central node (shaded) typically refers to the surrounding 8 nodes (diagonal hatching).  The periphery (used by \cite{tsutsui1996simulated}), refers to the set of nodes that surround the local neighborhood (unshaded nodes).} \label{fig:LocalNodeTypes}
 \end{figure}
-
-
-\bibliography{FeatureTrackingBibliography}
-\bibliographystyle{copernicus}
 
 \end{document}
