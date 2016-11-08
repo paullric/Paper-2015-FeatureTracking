@@ -269,9 +269,28 @@ An analogous procedure is applied in the southern hemisphere, except searching o
 
 %Examining the Figure \ref{fig:TropicalCycloneDensity}, regions of high easterly wave activity over the ocean are also key centers for tropical cyclogenesis.
 
+\subsection{Tropical cyclones forecast trajectories} \label{sec:TropicalCycloneForecast}
+
+We also provide an example of TempestExtremes to track forecasted tropical cyclones in numerical weather prediction simulations. Here, we show two deterministic forecasts (initialized at 00Z on 21 and 22 October 2012) for Hurricane Sandy using the Community Atmosphere Model (CAM) with a 0.125$^\circ$ (14km) grid spacing over the North Atlantic basin. Details about the model setup, forecast skill of CAM, and a case study of Hurricane Sandy results can be found in \citet{Zarzycki2015TCForecast}. Both forecasts were initialized prior to the National Hurricane Center declaring Sandy as a tropical depression, which occurred at 12Z 22 October \citep{NHCSandy}. In Figure \ref{fig:SandyTraj}, black dots indicate Sandy's forecast trajectory when applying the operational tracker used by the National Centers for Environmental Prediction (NCEP) \citep{Marchok2002} while red dots are show the same using a sample configuration of TempestExtremes. This configuration finds local minima in the 6-hourly SLP (\texttt{slp}) fields, which cannot lie within a great-circle-distance of 10.0$^\circ$ of another. An increase in SLP of at least 0.5 hPa within 5$^\circ$ of the candidate node is required (closed contour) as is a decrease in 300 hPa air temperature (\texttt{tm})of 0.1 K within 5$^\circ$ of the node, with a 1.0$^\circ$ offset permitted between the upper level warm core maximum and sea level pressure minimum (relevant for sheared TCs where the vortex may be tilted in the vertical direction). Note that no "best guess initial location" of the cyclone is defined, as is the case with many operational tracking systems.
+
+{\small \begin{verbatim}
+  ./DetectCyclonesUnstructured
+    --in_data $ffile --out $outf --mergedist 10.0
+    --closedcontourcmd "slp,0.5,5.0,0;tm,-0.1,5.0,1.0"
+    --outputcmd slp,min,0;_VECMAG(u850,v850),max,2;_VECMAG(u_ref,v_ref),max,2"
+\end{verbatim}}
+
+{\small \begin{verbatim}
+  ./StitchNodes --in cand.cyc --out forecast.traj
+  --format "i,j,lon,lat,slp,wind850,windbot"
+  --range 6.0 --minlength 8 --maxgap 2
+\end{verbatim}}
+
+The results here demonstrate good agreement with the NCEP vortex tracker, highlighting the capability of this framework to track even pre-genesis storm features, although the sensitivity (and associated potential noise) required to find weak, shallow, or sheared storms depends on the thresholds defined in \texttt{DetectCyclonesUnstructured}. Some differences between tracked storm centers are noted, particularly at the beginning of the forecasts, where the storm's SLP is greater (weaker) than 1005 hPa. This is due to the fact that the pre-genesis vortex is naturally somewhat disorganized and the NCEP tracker uses an average of multiple primary fixes (e.g., 700 and 850 hPa relative vorticity, sea level pressure, 700 and 850 hPa geopotential heights) to define the cyclone center whereas this configuration of TempestExtremes defines storm location based on sea level pressure minimum only.
+
 \subsection{Tropical cyclones in a simulation with VR-CAM} \label{sec:TropicalCycloneCAM}
 
-For our final example, we assess the differences in tropical cyclone character obtained from native and regridded datasets. Using the variable-resolution spectral element option in the Community Atmosphere Model (VR-CAM-SE, \citet{Neale2012, Zarzycki2014APE}) to refine the northern hemisphere to 0.25$^\circ$ resolution, a simulation of a hurricane season (June - November) has been performed. With the high-order spectral element dynamical core used to solve the fluid equations in the atmosphere, VR-CAM-SE has been demonstrated to be effective in simulating tropical cyclone-like features \citep{zarzycki2014multidecadal, Zarzycki2014MWR, Zarzycki2015TCForecast}. Since VR-CAM-SE uses an unstructured mesh with degrees of freedom stored at spectral element Gauss-Lobatto (GL) nodes, data is typically analyzed only after being regridded to a regular latitude-longitude mesh of approximately equal resolution.  The regridding procedure has the potential to clip local extrema and smear out grid-scale features.
+For our final example, we assess the differences in tropical cyclone character obtained from native and regridded datasets. Using the variable-resolution spectral element option in CAM (VR-CAM-SE, \citet{Neale2012, Zarzycki2014APE}) to refine the northern hemisphere to 0.25$^\circ$ resolution, a simulation of a hurricane season (June - November) has been performed. With the high-order spectral element dynamical core used to solve the fluid equations in the atmosphere, VR-CAM-SE has been demonstrated to be effective in simulating tropical cyclone-like features \citep{zarzycki2014multidecadal, Zarzycki2014MWR, Zarzycki2015TCForecast}. Since VR-CAM-SE uses an unstructured mesh with degrees of freedom stored at spectral element Gauss-Lobatto (GL) nodes, data is typically analyzed only after being regridded to a regular latitude-longitude mesh of approximately equal resolution.  The regridding procedure has the potential to clip local extrema and smear out grid-scale features.
 
 For this example, we use the high-order regridding package TempestRemap \citep{ullrich2015arbitrary, ullrich2016arbitrary} for remapping the native spectral element output to a regular latitude-longitude grid with 0.25$^\circ$ grid spacing.  For purposes of determining connectivity on the variable-resolution spectral element mesh, we connect GL nodes along the coordinate axis of each quadrilateral element (see Figure \ref{fig:FiniteElementConnectivity}).  DetectCyclonesUnstructured is then applied to both the native grid data and the regridded data on the regular latitude-longitude mesh (using the configuration specified in section \ref{sec:TropicalCycloneExample}) and tropical cyclones are categorized (color-coded) by maximum surface wind speed as defined by the Saffir-Simpson scale \citep{Simpson1974}, such that orange and red trajectories represent the strongest classifications of storms.  The results of this analysis are depicted in Figure \ref{fig:TropicalCycloneCAM}.  As expected, the native grid output produces essentially identical tracks, but an increase in tropical cyclone intensity in some cases (with some tropical cyclones dropping down by a full category as a consequence of the remapping procedure and discrete nature of binning storm strength).
 
@@ -751,6 +770,22 @@ path set S = stitch_nodes(set array P[1..T], dist, maxgap)
 \includegraphics[width=4in, clip, trim=0.2cm 3.6cm 0.2cm 3.1cm]{plot-cfsr_tew_density.pdf}
 \end{center}
 \caption{Tropical easterly wave counts within each $2^\circ \times 2^\circ$ grid cell over the period 1979-2010 obtained using the procedure described in section \ref{sec:TropicalEasterlyWavesExample}.} \label{fig:TropicalEasterlyWaveDensity}
+\end{figure}
+
+%\begin{figure}
+%\centering
+%\begin{tabular}{cc}
+%\includegraphics[width=18pc]{sandy_traj_20121021_000000.pdf} & \includegraphics[width=18pc]{sandy_traj_20121022_000000.pdf}
+%\end{tabular}
+%\caption{Input parameter $\mu^{*}$-$\sigma$ MM paris for five output metrics using CFSR with DZ300500. Pairs which are closer to the top right corner of each panel indicate inputs that drive output metric sensitivity when perturbed. Same as Fig. 2 in manuscript except with CFSR data instead of JRA.}
+%\label{fig:musigma-DZ300500-CFSR}
+%\end{figure}
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=36pc]{plot-sandy-traj.pdf}
+\end{center}
+\caption{Forecast CAM trajectories for Hurricane Sandy initialized at 00Z on (a.) 21 and (b.) 22 October 2012. Black dots indicate trajectories defined using the NCEP operational vortex tracker with red dots denoted trajectories defined using a sample configuration of TempestExtremes.} \label{fig:SandyTraj}
 \end{figure}
 
 \begin{figure}

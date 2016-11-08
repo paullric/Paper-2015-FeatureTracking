@@ -1,0 +1,5 @@
+We would like to thank...
+
+As a response to the conundrum of tracking and forecasting weaker 
+
+At a more existential level, it's worth noting that we strive to not solely publish a tracker. Our aspiration would be for TempestExtremes to be utilized in such a way that makes sense for the user. For example, if a TC forecaster is particularly concerned with a developing storm in the Gulf of Mexico, he/she could reduce the thresholds for detection (ex: relaxing the PSL depth criteria) in order to better track that system in question. We know from personal experience that reducing the strictness of the tracker leads to more "false alarms," so the idea of tracking weak/shallow/sheared TCs is a signal-to-noise problem. If a user is in search of a weaker signal, they will need to make expert opinions on how much noise is acceptable for their particular application. While an operational forecaster may accept additional noise to enhance their signal for systems they are concerned with, a multidecadal climate modeler may be more willing to "miss" very weak TCs such that their false alarm rate is greatly reduced.
