@@ -139,26 +139,24 @@ For purposes of determining connectivity of the unstructured grid, we require th
 As mentioned earlier, in order to avoid sensitivity of the detection scheme to grid resolution, great-circle-distance has been employed throughout.  In terms of regular latitude-longitude coordinates, the great-circle-distance ($r$), for a sphere of radius $a$, between points $(\lambda_1, \varphi_1)$ and $(\lambda_2, \varphi_2)$ is defined via the symmetric operation
 \begin{equation}
 r(\lambda_1, \varphi_1; \lambda_2, \varphi_2) = a \arccos \left( \sin \varphi_1 \sin \varphi_2 + \cos \varphi_1 \cos \varphi_2 \cos (\lambda_1 - \lambda_2) \right).
-\end{equation}  Algorithmically, this calculation is implemented as \texttt{gcdist(p,q)} for given graph nodes \texttt{p} and \texttt{q}.
+\end{equation}  Algorithmically, this calculation is implemented as \texttt{gcdist(p,q)} for given graph nodes \texttt{p} and \texttt{q}.  The difference between great-circle distance and latitude-longitude distance is striking at high latitudes, as depicted in Figure \ref{fig:detection_dist}.  Whereas latitude-longitude distance is generally sufficient for tropical cyclone detection, tracking of high-latitude phenomena such as extratropical cyclones is expected to be more consistent when great circle distance is employed.
 
 \subsection{Efficient neighbor search using $k$-d Trees}
 
-Three-dimensional ($k=3$) $k$-d trees \citep{bentley1975multidimensional} are used throughout our detection code using the implementation of \cite{tsiombikas2015kdtree}.  Although $k$-d trees use 3D straight-line instance instead of great-circle-distance, we utilize the observation that straight-line and great-circle distance maintain the same ordering for points confined to the surface of the sphere.  Three key functions made available by the $k$-d tree structure are used:
+Three-dimensional ($k=3$) $k$-d trees \citep{bentley1975multidimensional} are used throughout our detection code using the implementation of \cite{tsiombikas2015kdtree}.  $k$-d trees are a data structure that enable $O(\log N)$ average time for nearest neighbor search, where $N$ is the total number of nodes, while also requiring only $O(N \log N)$ construction time and a $O(N)$ data storage requirement.  Although $k$-d trees use 3D straight-line instance instead of great-circle-distance, we utilize the observation that straight-line and great-circle distance maintain the same ordering for points confined to the surface of the sphere.  Three key functions made available by the $k$-d tree structure are used:
 \begin{itemize}
 \item[] \texttt{K = build\_kd\_tree(P)} constructs a $k$-d tree \texttt{K} from a point set \texttt{P}.
 \item[] \texttt{q = kd\_tree\_nearest\_neighbor(K, p)} locates the nearest neighbor \texttt{q} to point \texttt{p} using the $k$-d tree \texttt{K}.
 \item[] \texttt{S = kd\_tree\_all\_neighbors(K, p, dist)} locates all points that are within a distance \texttt{dist} of a point \texttt{p} within the $k$-d tree \texttt{K}.
-\end{itemize}
-
-\noindent A key advantage of $k$-d trees is their relatively efficient $O(n \log n)$ construction time and $O(\log n)$ average time nearest neighbor search, and $O(n)$ data storage requirements.
+\end{itemize}  An example $k$-d tree in two dimensions is depicted in Figure \ref{fig:kdtree_fig} along with a brief description of how the nearest-neighbor algorithm is performed.
 
 \subsection{Computing a spatial averaged mean}
 
-Many existing tracking algorithms use either a spatially-averaged mean field or an anomaly field computed against the spatially-averaged mean \citep{haarsma1993tropical,bengtsson1995hurricane}.  The mean operation (implemented in TempestExtremes as \texttt{\_MEAN()} in the variable specification) is computed on unstructured grids via graph search (see Algorithm \ref{alg:field_mean_value}).  Anomaly from the mean can then be computed in conjunction with the \texttt{\_DIFF} operator (see Appendix \ref{sec:VariableSpecification}).
+Many existing tracking algorithms use either a spatially-averaged mean field (over a given distance) or an anomaly field computed against the spatially-averaged mean \citep{haarsma1993tropical,bengtsson1995hurricane}.  The mean operation (implemented in TempestExtremes as \texttt{\_MEAN()} in the variable specification) is computed on unstructured grids via graph search (see Algorithm \ref{alg:field_mean_value}).  Anomaly from the mean can then be computed in conjunction with the \texttt{\_DIFF} operator (see Appendix \ref{sec:VariableSpecification}).
 
 \subsection{Extrema detection}
 
-For purposes of computational efficiency, candidate points are initially located by identifying local extrema in a given field (for instance SLP) via \texttt{find\_all\_minima} (Algorithm \ref{alg:find_all_minima}).  Candidates are then eliminated if they are ``too close'' to stronger extrema (Algorithm \ref{alg:merge_candidates_minima}) (e.g. \cite{pinto2005sensitivities}).  The initial search field is specified to TempestExtremes either via the \texttt{-\;\!\!-searchbymin} or \texttt{-\;\!\!-searchbymax} command line argument.  The merge distance used in \texttt{merge\_candidates\_minima} is specified via the \texttt{-\;\!\!-mergedist} command line argument.
+For purposes of computational efficiency, candidate points are initially located by identifying local extrema in a given field (for instance sea-level-pressure (SLP)) via \texttt{find\_all\_minima} (Algorithm \ref{alg:find_all_minima}).  This algorithm compares all nodes against their associated neighbors and only tags points that are less/greater than those neighbors.  Candidates are then eliminated if they are ``too close'' to stronger extrema (Algorithm \ref{alg:merge_candidates_minima}) (e.g. \cite{pinto2005sensitivities}).  This algorithm is performed by eliminating candidate nodes that are within a given distance of a stronger extrema.  The initial search field is specified to TempestExtremes either via the \texttt{-\;\!\!-searchbymin} or \texttt{-\;\!\!-searchbymax} command line argument.  The merge distance used in \texttt{merge\_candidates\_minima} is specified via the \texttt{-\;\!\!-mergedist} command line argument.
 
 \subsection{Closed contour criteria} \label{sec:ClosedContour}
 
@@ -168,11 +166,11 @@ Here we propose an alternative closed contour criteria that is largely insensiti
 
 \subsection{Thresholding}
 
-Additional threshold criteria may be applied at the detection stage in order to further eliminate undesirable candidates.  For example, a common threshold criteria requires that a field \texttt{G} satisfy some minimum value within a distance \texttt{dist} of the candidate, as implemented in Algorithm \ref{alg:threshold_max}.  TempestExtremes implements thresholding via the command line argument \texttt{-\;\!\!-thresholdcmd}.
+Additional threshold criteria may be applied at the detection stage in order to further eliminate undesirable candidates.  For example, a common threshold criteria requires that a field \texttt{G} satisfy some minimum value within a distance \texttt{dist} of the candidate, as implemented in Algorithm \ref{alg:threshold_max}.  TempestExtremes implements thresholding via the command line argument \texttt{-\;\!\!-thresholdcmd}, and includes thresholds for candidate nodes to be greater-than, less-than, equal to, or not equal to a specified value.
 
 \subsection{Stitching}
 
-The basic track stitching procedure (which represents the Reduce() stage in MapReduce) is implemented in Algorithm \ref{alg:stitch_nodes} using the output from the detection procedure at each time level (stored in set array \texttt{P[1..T]}).  It requires additional parameters to specify a maximum great-circle-distance between nodes (\texttt{dist}), and a maximum gap size (\texttt{maxgap}).  Here, gap size refers to the maximum number of sequential non-detections that can occur before a path is considered terminated.  This argument is useful, for instance, for tracking tropical storms that temporarily weaken below acceptable criteria before re-strengthening.
+The basic track stitching procedure (which represents the Reduce() stage in MapReduce) is implemented in Algorithm \ref{alg:stitch_nodes} using the output from the detection procedure at each time level (stored in set array \texttt{P[1..T]}).  It requires additional parameters to specify a maximum great-circle-distance between in-sequence nodes (\texttt{dist}), and a maximum gap size (\texttt{maxgap}).  Here, gap size refers to the maximum number of sequential non-detections that can occur before a path is considered terminated.  This argument is useful, for instance, for tracking tropical storms that temporarily weaken below acceptable criteria before re-strengthening.
 
 For simplicity, $k$-d trees are constructed at each time level in order to maximize the efficiency of the search.  Each candidate pair (time, node) can only be used in one path, and so construction simply requires exhausting the list of available candidates.  Once paths have been constructed, additional criteria can be applied -- for instance, minimum path length or additional criteria based on minimum path length or minimum distance between the start and endpoints of the path (see Appendix \ref{sec:StitchNodesAppendix}).  Thresholds based on field values may also be applied, \textit{e.g.} wind speed must be greater than a particular value for at least 8 time steps of each track.
 
@@ -271,7 +269,7 @@ An analogous procedure is applied in the southern hemisphere, except searching o
 
 \subsection{Tropical cyclones forecast trajectories} \label{sec:TropicalCycloneForecast}
 
-We also provide an example of TempestExtremes to track forecasted tropical cyclones in numerical weather prediction simulations. Here, we show two deterministic forecasts (initialized at 00Z on 21 and 22 October 2012) for Hurricane Sandy using the Community Atmosphere Model (CAM) with a 0.125$^\circ$ (14km) grid spacing over the North Atlantic basin. Details about the model setup, forecast skill of CAM, and a case study of Hurricane Sandy results can be found in \citet{Zarzycki2015TCForecast}. Both forecasts were initialized prior to the National Hurricane Center declaring Sandy as a tropical depression, which occurred at 12Z 22 October \citep{NHCSandy}. In Figure \ref{fig:SandyTraj}, black dots indicate Sandy's forecast trajectory when applying the operational tracker used by the National Centers for Environmental Prediction (NCEP) \citep{Marchok2002} while red dots are show the same using a sample configuration of TempestExtremes. This configuration finds local minima in the 6-hourly SLP (\texttt{slp}) fields, which cannot lie within a great-circle-distance of 10.0$^\circ$ of another. An increase in SLP of at least 0.5 hPa within 5$^\circ$ of the candidate node is required (closed contour) as is a decrease in 300 hPa air temperature (\texttt{tm})of 0.1 K within 5$^\circ$ of the node, with a 1.0$^\circ$ offset permitted between the upper level warm core maximum and sea level pressure minimum (relevant for sheared TCs where the vortex may be tilted in the vertical direction). Note that no "best guess initial location" of the cyclone is defined, as is the case with many operational tracking systems.
+We also provide an example of TempestExtremes to track forecasted tropical cyclones in numerical weather prediction simulations. Here, we show two deterministic forecasts (initialized at 00Z on 21 and 22 October 2012) for Hurricane Sandy using the Community Atmosphere Model (CAM) with a 0.125$^\circ$ (14km) grid spacing over the North Atlantic basin. Details about the model setup, forecast skill of CAM, and a case study of Hurricane Sandy results can be found in \citet{Zarzycki2015TCForecast}. Both forecasts were initialized prior to the National Hurricane Center declaring Sandy as a tropical depression, which occurred at 12Z 22 October \citep{NHCSandy}. In Figure \ref{fig:SandyTraj}, black dots indicate Sandy's forecast trajectory when applying the operational tracker used by the National Centers for Environmental Prediction (NCEP) \citep{Marchok2002} while red dots are show the same using a sample configuration of TempestExtremes. This configuration finds local minima in the 6-hourly SLP (\texttt{slp}) fields, which cannot lie within a great-circle-distance of 10.0$^\circ$ of another. An increase in SLP of at least 0.5 hPa within 5$^\circ$ of the candidate node is required (closed contour) as is a decrease in 300 hPa air temperature (\texttt{tm}) of 0.1 K within 5$^\circ$ of the node, with a 1.0$^\circ$ offset permitted between the upper level warm core maximum and sea level pressure minimum (relevant for sheared TCs where the vortex may be tilted in the vertical direction). Note that no ``best guess initial location'' of the cyclone is defined, as is the case with many operational tracking systems.
 
 {\small \begin{verbatim}
   ./DetectCyclonesUnstructured
@@ -304,10 +302,10 @@ Automated pointwise feature trackers have been frequently and successfully emplo
 
 \subsection*{Code Availability}
 
-The open-source software described in this manuscript has been released as part of the TempestExtremes software package, and is available for use under the Lesser GNU Public License (LGPL).  All software can be obtained from GitHub at:
+The open-source software described in this manuscript has been released as part of the TempestExtremes software package, and is available for use under the Lesser GNU Public License (LGPL).  Software and examples can be obtained from GitHub at:
 \begin{center}
 \texttt{https://github.com/ClimateGlobalChange/tempestextremes}
-\end{center} 
+\end{center}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% APPENDIX
@@ -742,6 +740,21 @@ path set S = stitch_nodes(set array P[1..T], dist, maxgap)
 \includegraphics[width=4in]{UnstructuredGrid.pdf}
 \end{center}
 \caption{An example node graph describing an unstructured grid (blue lines), where nodes are co-located with volume centerpoint locations (solid circles) and edges connect adjacent volumes.} \label{fig:unstructured_grid}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=2in]{detection_lld.pdf}
+\includegraphics[width=2in]{detection_gcd.pdf}
+\end{center}
+\caption{Grid cells on a latitude-longitude mesh whose centroids are within 30$^\circ$ of a cell at $68^\circ$N latitude using latitude-longitude distance (left) and great-circle distance (right).} \label{fig:detection_dist}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=5in]{kdtree_fig.pdf}
+\end{center}
+\caption{An example two-dimensional $k$-d tree ($k = 2$) built from nodes \textsf{\textbf{a}} through \textsf{\textbf{h}}.  Dividing planes are constructed by cycling through each coordinate and determining the median node (left).  This gives rise to a tree structure (right) that, in conjunction with an input node, can then be searched recursively for a corresponding rectangular domain in physical space.  The last leaf node is labelled as the best candidate for nearest neighbor and the tree is ``unwound'' to test other potential candidates.  The number of nodes that need to be examined is limited to domains that overlap a hypersphere with origin at the input node and with distance to the current candidate.} \label{fig:kdtree_fig}
 \end{figure}
 
 \begin{figure}
